@@ -3,8 +3,14 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Data
+Data/*
+
 # Notebook file
-*.ipynb
+Notebook/*
+
+!Data/.gitkeep
+!Notebook/.gitkeep
 
 # C extensions
 *.so
