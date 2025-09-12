@@ -38,7 +38,7 @@ menus = []
 
 for i in range(num_menus):
     name = st.text_input(f"서비스 {i+1} 이름", key=f"name_{i}")
-    price = int(st.text_input(f"서비스 {i+1} 가격 (원)", key=f"price_{i}_text"))
+    price = st.text_input(f"서비스 {i+1} 가격 (원)", key=f"price_{i}_text")
     st.markdown(f"---") 
     try:
         price = int(price) if price else 0
