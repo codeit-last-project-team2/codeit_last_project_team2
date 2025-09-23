@@ -1,17 +1,18 @@
-# 모든 파일 무시
-/*
-
 # .gitignore는 추적
 !.gitignore
 
-# backend, frontend 폴더 허용
-!/backend/
-!/frontend/
+# .ipynb_checkpoints 디렉토리 무시
+.ipynb_checkpoints/
 
-# 그 안에서는 다 무시
-/backend/*
-/frontend/*
+# Python 바이트코드 파일 무시
+__pycache__/
 
-# 하지만 main.py, app.py만 추적
-!/backend/main.py
-!/frontend/app.py
+# notebook 디렉토리 무시
+notebook/
+
+# env 파일 무시
+.env
+
+# data 파일 무시
+data/
+
