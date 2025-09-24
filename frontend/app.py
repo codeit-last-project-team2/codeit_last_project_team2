@@ -1,9 +1,8 @@
 # ---------------------------------------------------------
-# Streamlit Frontend (Slim)
+# Streamlit Frontend (Slim, Fixed)
 # - STEP1: GPT 문구 추천
 # - STEP2: 이미지 생성(원본 / 깔끔포스터)
 # - 히스토리(보기/다운로드/삭제/벌크삭제)
-# - 합성/업로드 기능 제거
 # ---------------------------------------------------------
 import os, base64, requests, streamlit as st
 
@@ -83,11 +82,11 @@ with right:
     if "token" in st.session_state:
         if st.button("로그아웃"): _logout()
     else:
-        st.link_button("Google로 로그인", f"{BACKEND_URL}/auth/google/login", use_container_width=True)
+        st.link_button("Google로 로그인", f"{BACKEND_URL}/auth/google/login")
 
 st.divider()
 
-# ---- 로컬 회원가입/로그인 (간단폼)
+# ---- 로컬 회원가입/로그인
 if "token" not in st.session_state:
     st.subheader("또는 이메일로 이용하기")
     tab1, tab2 = st.tabs(["회원가입", "로그인"])
@@ -135,7 +134,7 @@ if "token" not in st.session_state:
 if not _ensure_token_valid():
     st.warning("세션 만료 또는 유효하지 않음. 다시 로그인해주세요."); st.stop()
 
-# ---- 상태
+# ---- 상태 초기화
 for key, default in [("suggestions", []), ("picked_text", ""), ("ai_image_url", None), ("poster_url", None)]:
     if key not in st.session_state: st.session_state[key] = default
 
@@ -182,7 +181,7 @@ st.write("---")
 st.subheader("현재 사용할 문구 (수정 가능)")
 st.session_state.picked_text = st.text_input("최종 문구", value=st.session_state.picked_text or base_line)
 
-# ---- STEP 2: 이미지 생성 (합성 제거)
+# ---- STEP 2: 이미지 생성
 st.header("STEP 2) 이미지 생성")
 size    = st.selectbox("이미지 크기", ["1024x1024", "1024x1792", "1792x1024"], index=0)
 quality = st.selectbox("품질", ["standard", "hd"], index=0)
@@ -201,7 +200,7 @@ with c3:
                                         "size": size, "quality": quality, "style": style}).json()
                     if js.get("image_url"):
                         st.session_state.ai_image_url = js["image_url"]
-                        st.image(js["image_url"], caption=f"AI 이미지 ({size})", use_container_width=True)
+                        st.image(js["image_url"], caption=f"AI 이미지 ({size})")
                         st.success("완료!")
                     else:
                         st.error(f"실패: {js.get('error','')}")
@@ -222,7 +221,7 @@ with c4:
                                         "size": size, "quality": quality, "style": style}).json()
                     if js.get("result_url"):
                         st.session_state.poster_url = js["result_url"]
-                        st.image(js["result_url"], caption="포스터", use_container_width=True)
+                        st.image(js["result_url"], caption="포스터")
                         st.success("완료! 🔥")
                     else:
                         st.error(f"실패: {js.get('error','')}")
@@ -239,11 +238,11 @@ def _data_url_to_bytes(data_url: str) -> bytes:
 if st.session_state.get("ai_image_url"):
     st.download_button("AI 이미지 다운로드",
         data=_data_url_to_bytes(st.session_state["ai_image_url"]),
-        file_name="ai_image.png", mime="image/png", use_container_width=True)
+        file_name="ai_image.png", mime="image/png")
 if st.session_state.get("poster_url"):
     st.download_button("포스터 이미지 다운로드",
         data=_data_url_to_bytes(st.session_state["poster_url"]),
-        file_name="poster.png", mime="image/png", use_container_width=True)
+        file_name="poster.png", mime="image/png")
 
 # ---- 히스토리
 st.write("---")
@@ -276,7 +275,7 @@ else:
             if st.checkbox("선택", key=f"sel_{it['id']}"):
                 selected_ids.add(it["id"])
             if it.get("data_url"):
-                st.image(it["data_url"], use_container_width=True)
+                st.image(it["data_url"])
             else:
                 st.warning("이미지 파일을 불러올 수 없어요.")
             st.write(it["ad_text"])
