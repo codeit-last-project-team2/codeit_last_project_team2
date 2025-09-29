@@ -1,6 +1,8 @@
 import streamlit as st
 import requests
 import os
+import base64
+import glob
 
 BACKEND_URL = "http://127.0.0.1:8000"
 
@@ -67,32 +69,73 @@ st.divider()
 # -----------------------------
 st.header("✨ 광고 기능 미리보기")
 
+mascot_dir = "data/sample/mascot_sample"
+
+base_dir = "data/sample"
+
+# 포스터 이미지
+poster_dir = os.path.join(base_dir, "poster_sample")
+poster_images = sorted(
+    glob.glob(os.path.join(poster_dir, "*.jpg"))
+    + glob.glob(os.path.join(poster_dir, "*.png"))
+)
+
+# 카드뉴스 이미지
+cardnews_dir = os.path.join(base_dir, "cardnews_sample")
+cardnews_images = sorted(
+    glob.glob(os.path.join(cardnews_dir, "*.jpg"))
+    + glob.glob(os.path.join(cardnews_dir, "*.png"))
+)
+
+# 홈페이지 이미지
+homepage_dir = os.path.join(base_dir, "homepage_img_sample")
+homepage_images = sorted(
+    glob.glob(os.path.join(homepage_dir, "*.jpg"))
+    + glob.glob(os.path.join(homepage_dir, "*.png"))
+)
+
+# 마스코트 이미지
+mascot_dir = os.path.join(base_dir, "mascot_sample")
+mascot_images = sorted(
+    glob.glob(os.path.join(mascot_dir, "*.jpg"))
+    + glob.glob(os.path.join(mascot_dir, "*.png"))
+)
+
+
 features = [
     {
         "title": "🖼️ 포스터 광고 생성",
         "desc": "상품명, 이벤트, 날짜 등을 입력하면 AI가 자동으로 포스터 이미지를 생성합니다.",
-        "image": "data/sample/poster_sample.png",
+        "image": poster_images,
         "page": "pages/1_포스터_광고_생성.py"
     },
     {
         "title": "🎨 카드 섹션 광고 생성",
         "desc": "업로드한 이미지를 흑백, 블러, 텍스트 오버레이 등으로 꾸밀 수 있습니다.",
-        "image": "data/sample/card_sample.png",
+        "image": cardnews_images,
         "page": "pages/2_카드_광고_생성.py"
     },
     {
         "title": "📝 홈페이지 생성",
         "desc": "가게명, 상품명, 이벤트 등을 입력하면 블로그 홍보 글을 만들어줍니다.",
-        "image": "data/sample/homepage_sample.png",
+        "image": homepage_images,
         "page": "pages/3_홈페이지.py"
     },
     {
         "title": "🎨 마스코트 생성",
         "desc": "업로드한 이미지를 흑백, 블러, 텍스트 오버레이 등으로 꾸밀 수 있습니다.",
-        "image": "data/sample/mascot_sample.jpg",
+        "image": mascot_images,
         "page": "pages/4_마스코트.py"
     },
 ]
+
+def to_data_uri(path: str):
+    """이미지 파일을 base64로 인코딩해서 브라우저에서 직접 표시 가능하게 변환"""
+    with open(path, "rb") as f:
+        data = f.read()
+    mime = "image/" + path.split(".")[-1]
+    b64 = base64.b64encode(data).decode()
+    return f"data:{mime};base64,{b64}"
 
 # ✅ 2열씩 반복 배치
 for i in range(0, len(features), 2):
@@ -101,12 +144,64 @@ for i in range(0, len(features), 2):
         with cols[j]:
             st.subheader(feature["title"])
             st.caption(feature["desc"])
-            if os.path.exists(feature["image"]):
-                st.image(feature["image"], use_container_width=True)
-            else:
-                st.warning("⚠️ 미리보기 이미지 없음")
-            if st.button("👉 이동하기", key=feature["title"]):
-                st.switch_page(feature["page"])
+
+            # 여러 장 이미지 → 슬라이더로 출력
+            if "image" in feature and feature["image"]:
+                uris = []
+                for img_path in feature["image"]:
+                    if os.path.exists(img_path):
+                        uris.append(to_data_uri(img_path))
+
+                if uris:
+                    swiper_class = f"swiper-{abs(hash(feature['title']))}"
+
+                    slider_html = f"""
+                    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+                    <div class="{swiper_class} swiper">
+                    <div class="swiper-wrapper">
+                        {''.join(f'<div class="swiper-slide"><img src="{u}"/></div>' for u in uris)}
+                    </div>
+                    </div>
+                    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+                    <script>
+                    new Swiper('.{swiper_class}', {{
+                        loop: true,
+                        slidesPerView: 'auto',   // 이미지 크기만큼 이어붙이기
+                        spaceBetween: 0,         // 여백 제거
+                        freeMode: true,          // 자연스럽게 흐름
+                        speed: 4000,             // 흐르는 속도
+                        autoplay: {{
+                        delay: 0,
+                        disableOnInteraction: false,
+                        pauseOnMouseEnter: false,   // 🔹 마우스 올려도 멈추지 않음
+                        stopOnLastSlide: false      // 🔹 마지막 슬라이드에서 멈추지 않음
+                        }}
+                    }});
+                    </script>
+                    <style>
+                    .swiper {{
+                        width: 100%;
+                        height: 200px;   /* 슬라이더 높이 */
+                        border-radius: 8px;
+                        overflow: hidden;
+                        background: #000;
+                    }}
+                    .swiper-slide {{
+                        width: auto !important;  /* 이미지 크기대로 */
+                    }}
+                    .swiper-slide img {{
+                        height: 100%;
+                        width: auto;
+                        object-fit: contain;   /* 잘리지 않게 */
+                    }}
+                    </style>
+                    """
+                    st.components.v1.html(slider_html, height=220, scrolling=False)
+                else:
+                    st.warning("⚠️ 미리보기 이미지 없음")
+
+
+
 
 st.divider()
 
