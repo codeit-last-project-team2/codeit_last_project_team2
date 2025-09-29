@@ -14,5 +14,10 @@ notebook/
 .env
 
 # data 파일 무시
-data/
+data/*
 
+# 단, sample, font 폴더는 추적
+!data/font/
+!data/font/**
+!data/sample/
+!data/sample/**

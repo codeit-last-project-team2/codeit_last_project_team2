@@ -77,7 +77,7 @@ features = [
     {
         "title": "🎨 카드 섹션 광고 생성",
         "desc": "업로드한 이미지를 흑백, 블러, 텍스트 오버레이 등으로 꾸밀 수 있습니다.",
-        "image": "data/sample/mascot_sample.png",
+        "image": "data/sample/card_sample.png",
         "page": "pages/2_카드_광고_생성.py"
     },
     {
@@ -89,7 +89,7 @@ features = [
     {
         "title": "🎨 마스코트 생성",
         "desc": "업로드한 이미지를 흑백, 블러, 텍스트 오버레이 등으로 꾸밀 수 있습니다.",
-        "image": "data/sample/mascot_sample.png",
+        "image": "data/sample/mascot_sample.jpg",
         "page": "pages/4_마스코트.py"
     },
 ]
@@ -99,12 +99,12 @@ for i in range(0, len(features), 2):
     cols = st.columns(2)
     for j, feature in enumerate(features[i:i+2]):
         with cols[j]:
+            st.subheader(feature["title"])
+            st.caption(feature["desc"])
             if os.path.exists(feature["image"]):
                 st.image(feature["image"], use_container_width=True)
             else:
                 st.warning("⚠️ 미리보기 이미지 없음")
-            st.subheader(feature["title"])
-            st.caption(feature["desc"])
             if st.button("👉 이동하기", key=feature["title"]):
                 st.switch_page(feature["page"])
 
