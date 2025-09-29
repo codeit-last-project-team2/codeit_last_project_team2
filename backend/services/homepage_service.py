@@ -1,8 +1,11 @@
-﻿from backend.models.homepage_model import HomepageRequest, GithubUploadRequest
+﻿from backend.models.homepage_model import GithubUploadRequest
+from backend.models.homepage_model import HomepageRequest
 
 from openai import OpenAI
 
 from github import Github
+
+from pathlib import Path
 
 import os
 
@@ -26,10 +29,18 @@ def _extract_text(resp) -> str:
                 parts.append(getattr(c, "text", "") or "")
     return "".join(parts)
 
+def get_sample_html(sample_id):
+    if sample_id == '1':
+        sample_html_text = Path("Data\sample_page\sample1.html").read_text(encoding="utf-8")
+
+    return sample_html_text
+
+
 def generate_html(req: HomepageRequest, temperature: float = 0.8) -> str:
-    
-    prompt = f"""
-브랜드를 홍보하기 위한 페이지를 제작하려합니다. 다음의 조건을 참고하여 코드를 작성해주세요.
+    sample_html_text = get_sample_html(req.sample_id)
+    system_prompt = f"""
+브랜드를 홍보하기 위한 페이지를 제작하려합니다. 다음의 조건을 엄수하고, 브랜드 정보와 참고 HTML 템플릿을 바탕으로 브랜딩 페이지를 한 파일로 완성하세요.
+
 [조건]
 1. 결과는 index.html로 저장할 수 있도록 완전한 HTML코드이어야 합니다. 코드 외의 내용은 반환하지 마세요.
 2. HTML, CSS, JS가 한 문서에 포함되어야 합니다.
@@ -38,27 +49,32 @@ def generate_html(req: HomepageRequest, temperature: float = 0.8) -> str:
     요식업 - 메뉴 강조,
     서비스업 - 서비스 항목과 후기 강조, 
     쇼핑몰 - 상품 목록과 할인 배너 강조
-5. 반응형(모바일/PC 모두 지원)으로 작성해주세요.
-6. 버튼 클릭 시 JavaScript alert를 띄우는 기능을 추가해주세요.
+4. 과장/허위의 텍스트를 금지하며, [정보]의 내용 범위를 넘는 정보 생성 금지.
+"""
+    input_prompt = f"""
+[참고 템플릿]
+{sample_html_text}
 
-다음 정보를 바탕으로 index.html을 작성해주세요
-    - 상호명: {req.store_name},
-    - 업종 대분류: {req.category_main},
-    - 업종 소분류: {req.category_sub},
-    - 메뉴: {req.menus},
-    - 타켓층: {req.targets},
-    - 주요 판매 포인트: {req.selling_points},
-    - 광고 목적: {req.ad_purpose},
+[정보]
+    - 상호명: {req.store_name}
+    - e-mail: {req.email}
+    - 업종 대분류: {req.category_main}
+    - 업종 소분류: {req.category_sub}
+    - 메뉴: {req.menus}
+    - 타켓층: {req.targets}
+    - 주요 판매 포인트: {req.selling_points}
+    - 광고 목적: {req.ad_purpose}
     - 분위기: {req.mood}
-    - 위치: {req.location} 
+    - 위치: {req.address} 
     - 이벤트: {req.event}
     - 홈페이지 분위기: {req.tone}
 """
 
     response = client.responses.create(
-        model="gpt-4.1-mini",
+        model="gpt-4.1",
         temperature=temperature,
-        input=prompt,
+        input=input_prompt,
+        instructions=system_prompt
     )
 
     html = _extract_text(response).strip()
@@ -72,8 +88,8 @@ def githubpage_upload(req: GithubUploadRequest):
     org = g.get_organization(ORG_NAME)
     repo = org.get_repo(REPO_NAME)
 
-    path = f"users/{req.store_id}/index.html"
-    message = f"Add homepage for {req.store_id}"
+    path = f"users/{req.email}/{req.store_name}/index.html"
+    message = f"Add homepage for {req.email}/{req.store_name}"
 
     # --- 파일 업로드 (있으면 update, 없으면 create) ---
     try:
@@ -82,6 +98,6 @@ def githubpage_upload(req: GithubUploadRequest):
     except:
         repo.create_file(path, message, req.html, branch="main")
 
-    homepage_url = f"https://{ORG_NAME}.github.io/{REPO_NAME}/users/{req.store_id}/"
+    homepage_url = f"https://{ORG_NAME}.github.io/{REPO_NAME}/users/{req.email}/{req.store_name}/"
 
     return homepage_url

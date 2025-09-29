@@ -1,8 +1,14 @@
-﻿from pydantic import BaseModel, Field
-from typing import List, Optional
-from backend.models.user_information_model import Menu
+﻿from pydantic import BaseModel
 
-class HomepageRequest(BaseModel):
+from typing import List, Optional, Union
+
+class Menu(BaseModel):
+    img_path: Optional[str]  
+    name: str
+    price: Union[int, float]
+    desc: str
+
+class UserInformation(BaseModel):
     email: str
     store_name: str
     category_main: str
@@ -16,10 +22,10 @@ class HomepageRequest(BaseModel):
     mood: Optional[str]
     event: Optional[str]
     tone: Optional[str]
-    sample_id: str
 
+class StoresRequest(BaseModel):
+    user_email: str
 
-class GithubUploadRequest(BaseModel):
-    html: str
-    email: str
+class StoreInfoRequest(BaseModel):
+    user_email: str
     store_name: str

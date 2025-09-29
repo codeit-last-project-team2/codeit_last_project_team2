@@ -15,41 +15,58 @@ if not st.session_state.get("token"):
 headers = {"Authorization": f"Bearer {st.session_state.token}"}
 
 # -----------------------------
-# 세션 상태 초기화 (최초 실행 시만)
-# -----------------------------
-if "poster_history" not in st.session_state:
-    st.session_state.poster_history = []  # [{title, body, dalle_prompt, image_bytes}, ...]
-
-# -----------------------------
 # 입력 UI
 # -----------------------------
 with st.form("mascot_form"):
-    st.subheader("브랜드 정보 입력")
+    st.subheader("매장 선택")
+    store_list_res = requests.post(f"{BACKEND_URL}/userinfo/get_store_names", json={"user_email": st.session_state.get("user_email")}, headers=headers)
 
-    대표색상 = st.text_input("대표 색상",)
-    키워드 = st.text_input("키워드",)
-    성격 = st.text_input("성격",)
-    브랜드소개 = st.text_area("브랜드 소개")
-    추가요구사항 = st.text_area("추가 요구 사항","(선택)")
+    if store_list_res.status_code != 200:
+        st.error("조회 실패")
+        st.text(store_list_res.status_code)
+    else:
+        stores = store_list_res.json()
 
+    if len(stores) == 0:
+        st.text("등록된 매장이 없습니다.")
+    else:
+        selected_store = st.radio("매장을 선택하세요:", stores, horizontal=True)
+
+    store_info_res = requests.post(f"{BACKEND_URL}/userinfo/get_store_info", json={"user_email": st.session_state.get("user_email"), "store_name": selected_store}, headers=headers)
+
+    if store_info_res.status_code != 200:
+        st.error("조회 실패")
+        st.text(store_info_res.status_code)
+    else:
+        store_info = store_info_res.json()
+
+    st.subheader("추가 정보 입력")
+
+    color = st.text_input("대표 색상",)
+    keyword = st.text_input("키워드",)
+    personality = st.text_input("성격",)
+    output_style = st.selectbox("출력 형태를 선택하세요", ["2d", "3d", "픽셀", "카툰", "실사 일러스트", "미니멀", "심볼/아이콘", "수채화풍", "사이버/메카닉"], index=0)
+    additional_requirements = st.text_area("추가 요구 사항","(선택)")
     submitted = st.form_submit_button("마스코트 생성하기")
+
+
 
 # -----------------------------
 # 실행
 # -----------------------------
 if submitted:
-    info = {
-        "main_color": 대표색상,
-        "keyword": 키워드,
-        "personality": 성격,
-        "brand_intro": 브랜드소개,
-        "additional_requirements": '없음' if 추가요구사항=='(선택)' else 추가요구사항
+    st.info("마스코트 이미지를 생성 중입니다... 잠시만 기다려주세요!")
+    mascot_req = {
+        'main_color': color,
+        'keyword': keyword,
+        'mascot_personality': personality,
+        'store_name': store_info['store_name'],
+        'mood': store_info['mood'],
+        'output_style': output_style,
+        'additional_requirements': additional_requirements if additional_requirements != "(선택)" else '없음',
     }
 
-    st.info("마스코트 이미지를 생성 중입니다... 잠시만 기다려주세요!")
-
-
-    response = requests.post(f"{BACKEND_URL}/mascot/generate", json=info, headers=headers)
+    response = requests.post(f"{BACKEND_URL}/mascot/generate", json=mascot_req, headers=headers)
 
     if response.status_code != 200:
         st.error(f"마스코트 생성 실패: {response.text}")

@@ -32,7 +32,7 @@ location = st.text_input("장소", placeholder="서울 강남역 매장")
 vibe = st.text_input("분위기/스타일", placeholder="따뜻한, 가족, 피크닉")
 
 position = st.selectbox("제목 위치 선택", ["top", "center", "bottom"], index=0)
-gpt_model = st.selectbox("텍스트 생성 모델 선택", ["gpt-4o", "gpt-5", "gpt-5-mini"], index=0)
+gpt_model = st.selectbox("텍스트 생성 모델 선택", ["gpt-4o", "gpt-5", "gpt-5-mini", "gpt-4o-mini"], index=0)
 dalle_size = st.selectbox("이미지 크기", ["1024x1024", "1024x1792", "1792x1024"], index=0)
 
 go = st.button("🎨 포스터 생성", type="primary")
