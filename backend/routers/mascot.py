@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends
 
 from backend.models.mascot_model import MascotRequest
 from backend.services.mascot_service import generate_mascot_url_candidates

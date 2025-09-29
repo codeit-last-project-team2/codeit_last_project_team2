@@ -1,4 +1,3 @@
-# backend/routers/poster.py
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse, JSONResponse
 from backend.models.poster_text_model import PosterTextRequest, PosterTextResponse

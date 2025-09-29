@@ -13,4 +13,3 @@ def create_text(req: HomepageRequest, user=Depends(get_current_user)):
 @router.post("/upload")
 def create_text(req: GithubUploadRequest, user=Depends(get_current_user)):
     return githubpage_upload(req)
-

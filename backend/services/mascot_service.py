@@ -1,4 +1,4 @@
-﻿from backend.models.mascot_model import MascotRequest
+from backend.models.mascot_model import MascotRequest
 
 from openai import OpenAI
 
