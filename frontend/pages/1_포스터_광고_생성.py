@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 from io import BytesIO
 from PIL import Image
+import datetime
 
 BACKEND_URL = "http://127.0.0.1:8000"
 
@@ -27,7 +28,10 @@ if "poster_history" not in st.session_state:
 # -----------------------------
 product = st.text_input("상품명", placeholder="수제 햄버거")
 event = st.text_input("이벤트", placeholder="50% 할인 행사")
-date = st.text_input("날짜", placeholder="2025년 9월 20일")
+date = st.date_input(
+    "날짜",
+    value=datetime.date(2025, 9, 20),  # 기본값 설정
+)
 location = st.text_input("장소", placeholder="서울 강남역 매장")
 vibe = st.text_input("분위기/스타일", placeholder="따뜻한, 가족, 피크닉")
 

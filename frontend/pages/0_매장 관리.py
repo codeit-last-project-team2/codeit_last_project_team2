@@ -40,33 +40,21 @@ if "add_store" not in st.session_state:
 if "show_stores" not in st.session_state:
     st.session_state.show_stores = False
 
-if "del_store" not in st.session_state:
-    st.session_state.del_store = False
-
 #---------------------------------------------#
 #                기능 선택                     #
 #---------------------------------------------#
-col1, col2, col3 = st.columns(3)
+col1, col2 = st.columns(2)
 
 with col1:
     if st.button('매장 추가'):
         st.session_state.add_store = True
         st.session_state.show_stores = False
-        st.session_state.del_store = False
         st.rerun()
 
 with col2:
     if st.button("등록된 매장 확인"):
         st.session_state.add_store = False
         st.session_state.show_stores = True
-        st.session_state.del_store = False
-        st.rerun()
-
-with col3:
-    if st.button('매장 삭제'):
-        st.session_state.add_store = False
-        st.session_state.show_stores = False
-        st.session_state.del_store = True
         st.rerun()
 
 #---------------------------------------------#
@@ -188,14 +176,15 @@ if st.session_state.add_store:
         custom_targets = [ct.strip() for ct in custom_targets_raw.split(",") if ct.strip()]
         targets.extend(custom_targets)
     # ------------------------------------------------------------------------------------------
-    st.markdown("#### 판패 포인트")
+    st.markdown("#### 판매 포인트")
     selling_points = st.multiselect("", 
         [
             "저렴한 가격", "빠른 배달", "건강한 재료", "푸짐한 양", "독특한 맛/레시피", "지역 특산물 활용",
             "프리미엄 품질", "친절한 서비스", "깔끔한 위생 관리", "트렌디한 메뉴 구성", "계절/한정 메뉴 제공",
             "고객 맞춤형 옵션", "SNS 인증샷용 비주얼", "오랜 전통", "친환경", "로컬푸드 사용",
             "포장/테이크아웃 용이", "단체/모임 적합", "가성비 좋은 세트 메뉴"
-        ]
+        ],
+        placeholder="여기를 눌러 판매 포인트를 선택하세요!"
     )
 
     custom_points_raw = st.text_input("직접 입력(쉼표로 구분)", placeholder="예: 비건 메뉴, 프리미엄 와인, 저칼로리 옵션")
@@ -344,13 +333,14 @@ if st.session_state.show_stores:
             })
 
         targets_str = info['targets']
-        targets = json.loads(targets_str)
-        targets_text = ", ".join(targets)
+        
+        targets = json.loads(targets_str) if targets_str else None
+        targets_text = ", ".join(targets) if targets else None
         targets_input = st.text_input("타겟 고객", value=targets_text)
 
         selling_points_str = info['selling_points']
-        selling_points = json.loads(selling_points_str)
-        selling_points_text = ", ".join(selling_points)
+        selling_points = json.loads(selling_points_str) if selling_points_str else None
+        selling_points_text = ", ".join(selling_points) if selling_points else None
         selling_points_input = st.text_input("판매 포인트", value=selling_points_text)
 
         ad_purpose = st.text_input("광고 목적", value=info['ad_purpose'])
@@ -358,57 +348,37 @@ if st.session_state.show_stores:
         event = st.text_input("이벤트", value=info['event'])
         tone = st.text_input("광고 톤", value=info['tone'])
 
-        if st.button("저장하기"):
-            updated_info = {
-                "email": st.session_state.get("user_email"),
-                "store_name": store_name,
-                "category_main": category_main,
-                "category_sub": category_sub,
-                "call_number": call_number,
-                "address": address,
-                "menus": updated_menus, 
-                "targets": [t.strip() for t in targets_input.split(",") if t.strip()],
-                "selling_points": [s.strip() for s in selling_points_input.split(",") if s.strip()],  
-                "ad_purpose": ad_purpose,
-                "mood": mood,
-                "event": event,
-                "tone": tone,
-            }
-            res = requests.post(f"{BACKEND_URL}/userinfo/update", json=updated_info, headers=headers)
-            if res.status_code != 200:
-                st.error("매장 수정 실패")
-                st.stop()
-        
-            st.session_state.add_store = False
-            st.rerun()
-            st.text("매장 정보가 수정되었습니다!")
-
-#---------------------------------------------#
-#                매장 삭제                     #
-#---------------------------------------------#
-if st.session_state.del_store:
-    if st.button('매장 삭제 닫기', key='close_del_store'):
-        st.session_state.del_store = False
-        st.rerun()
-
-    res = requests.post(f"{BACKEND_URL}/userinfo/get_store_names", json={"user_email": st.session_state.get("user_email")}, headers=headers)
-
-    if res.status_code != 200:
-        st.error("조회 실패")
-        st.text(res.status_code)
-    else:
-        stores = res.json()
-    
-    if len(stores) == 0:
-        st.text("등록된 매장이 없습니다.")
-    else:
-        selected_store = st.radio("삭제할 매장을 선택하세요:", stores, horizontal=True)
-
-        if st.button('삭제'):
-            res = requests.post(f"{BACKEND_URL}/userinfo/delete_store", json={"user_email": st.session_state.get("user_email"), "store_name": selected_store}, headers=headers)
-
-            if res.status_code != 200:
-                st.error("조회 실패")
-                st.text(res.status_code)
-            else:
-                st.rerun()    
+        sub_col1, sub_col2 = st.columns(2)
+        with sub_col1:
+            if st.button("저장하기"):
+                updated_info = {
+                    "email": st.session_state.get("user_email"),
+                    "store_name": store_name,
+                    "category_main": category_main,
+                    "category_sub": category_sub,
+                    "call_number": call_number,
+                    "address": address,
+                    "menus": updated_menus, 
+                    "targets": [t.strip() for t in targets_input.split(",") if t.strip()],
+                    "selling_points": [s.strip() for s in selling_points_input.split(",") if s.strip()],  
+                    "ad_purpose": ad_purpose,
+                    "mood": mood,
+                    "event": event,
+                    "tone": tone,
+                }
+                res = requests.post(f"{BACKEND_URL}/userinfo/update", json=updated_info, headers=headers)
+                if res.status_code != 200:
+                    st.error("매장 수정 실패")
+                    st.stop()
+            
+                st.session_state.add_store = False
+                st.rerun()
+                st.text("매장 정보가 수정되었습니다!")
+        with sub_col2:
+            if st.button("삭제하기"):
+                res = requests.post(f"{BACKEND_URL}/userinfo/delete_store", json={"user_email": st.session_state.get("user_email"), "store_name": selected_store}, headers=headers)
+                if res.status_code != 200:
+                    st.error("조회 실패")
+                    st.text(res.status_code)
+                else:
+                    st.rerun()

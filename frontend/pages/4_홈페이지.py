@@ -44,10 +44,10 @@ with st.form("mascot_form"):
         store_info["selling_points"] = json.loads(store_info["selling_points"])
 
     # 샘플 문서
-    sample_id = st.selectbox("sample_id 선택", options=['1'])
+    sample_id = st.selectbox("참고 템플릿 선택", options=['1'])
     store_info['sample_id'] = sample_id
 
-    st.markdown("[샘플 1 보기](https://codeit-last-project-team2.github.io/homepage/sample_pages/sample1.html)")
+    st.markdown("[템플릿 1 보기](https://codeit-last-project-team2.github.io/homepage/sample_pages/sample1.html)")
     make = st.form_submit_button('홈페이지 생성', )
 
 # -----------------------------
