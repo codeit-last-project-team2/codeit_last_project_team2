@@ -1,0 +1,9 @@
+# 프로젝트 실행에 필요한 패키지
+
+fastapi
+uvicorn
+python-multipart
+openai
+streamlit
+requests
+python-dotenv

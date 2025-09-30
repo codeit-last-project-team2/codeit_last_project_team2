@@ -1,23 +1,34 @@
-# .gitignore는 추적
-!.gitignore
+# --- secrets (절대 푸시 금지) ---
+.env
+frontend/.streamlit/secrets.toml
 
-# .ipynb_checkpoints 디렉토리 무시
+# --- python 캐시/가상환경 ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# --- 편집기/OS 잡파일 ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
 .ipynb_checkpoints/
 
-# Python 바이트코드 파일 무시
-__pycache__/
+# --- streamlit 캐시 ---
+.streamlit/cache/
+frontend/.streamlit/cache/
 
-# notebook 디렉토리 무시
-notebook/
-
-# env 파일 무시
-.env
-
-# data 파일 무시
-data/*
-
-# 단, sample, font 폴더는 추적
-!data/font/
-!data/font/**
-!data/sample/
-!data/sample/**
+/.cache/
+/.jupyter/
+/.local/
+/.npm/
+/.vscode-server/
+/.streamlit/
+/ssh
+.bash_history
+.python_history
+.wget-hsts
