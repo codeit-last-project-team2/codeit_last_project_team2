@@ -6,7 +6,7 @@ import os, sqlite3
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # DB 파일 경로
-DB_PATH = os.path.join("data", "mascot_history.db")
+DB_PATH = os.path.join("data", "user_info", "database.db")
 os.makedirs("data", exist_ok=True)
 
 # ---------- DB 초기화 ----------
@@ -20,7 +20,7 @@ def init_db():
         store_name TEXT NOT NULL,
         keyword TEXT,
         mascot_personality TEXT,
-        url TEXT NOT NULL,
+        path TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -75,9 +75,9 @@ def save_mascot_history(item: MascotHistoryItem):
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     cur.execute("""
-        INSERT INTO mascot_history (user_email, store_name, keyword, mascot_personality, url)
+        INSERT INTO mascot_history (user_email, store_name, keyword, mascot_personality, path)
         VALUES (?, ?, ?, ?, ?)
-    """, (item.user_email, item.store_name, item.keyword, item.mascot_personality, item.url))
+    """, (item.user_email, item.store_name, item.keyword, item.mascot_personality, item.path))
     conn.commit()
     conn.close()
 
@@ -87,7 +87,7 @@ def get_mascot_history(user_email: str):
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     cur.execute("""
-        SELECT store_name, keyword, mascot_personality, url, created_at
+        SELECT store_name, keyword, mascot_personality, path, created_at
         FROM mascot_history
         WHERE user_email=?
         ORDER BY created_at DESC
@@ -100,7 +100,7 @@ def get_mascot_history(user_email: str):
             "store_name": r[0],
             "keyword": r[1],
             "mascot_personality": r[2],
-            "url": r[3],
+            "path": r[3],
             "created_at": r[4]
         }
         for r in rows

@@ -16,4 +16,4 @@ class MascotHistoryItem(BaseModel):
     store_name: str
     keyword: Optional[str]
     mascot_personality: Optional[str]
-    url: str
+    path: str

@@ -1,7 +1,5 @@
-﻿from backend.models.user_information_model import UserInformation, StoresRequest, StoreInfoRequest
-import os, sqlite3, json
-
-
+﻿from backend.models.user_information_model import UserInformation, StoreInfoRequest
+import os, sqlite3, json, shutil
 
 DATA_DIR = os.path.join("Data", "user_info")
 DB_PATH = os.path.join(DATA_DIR, "database.db")
@@ -31,7 +29,7 @@ def _make_db():
     conn.close()
         
 
-def upload_store(user_info: UserInformation):
+def upload_store(user_info: UserInformation, email):
     if not os.path.exists(DB_PATH):
         os.makedirs(DATA_DIR, exist_ok=True)
         _make_db()
@@ -45,7 +43,7 @@ def upload_store(user_info: UserInformation):
         menus, targets, selling_points, ad_purpose, mood, event, tone
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        user_info.email,
+        email,
         user_info.store_name,
         user_info.category_main,
         user_info.category_sub,
@@ -63,13 +61,13 @@ def upload_store(user_info: UserInformation):
     conn.commit()
     conn.close()
 
-def store_names(req:StoresRequest):
+def store_names(email):
     if not os.path.exists(DB_PATH):
         os.makedirs(DATA_DIR, exist_ok=True)
         _make_db()
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
-    cur.execute("SELECT store_name FROM user_information WHERE email = ?", (req.user_email,))
+    cur.execute("SELECT store_name FROM user_information WHERE email = ?", (email,))
 
     stores = cur.fetchall()
     stores = [row[0] for row in stores] 
@@ -78,14 +76,14 @@ def store_names(req:StoresRequest):
         
     return stores
 
-def store_info(req: StoreInfoRequest):
+def store_info(store_name, email):
     if not os.path.exists(DB_PATH):
         os.makedirs(DATA_DIR, exist_ok=True)
         _make_db()
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
-    cur.execute("SELECT * FROM user_information WHERE email = ? and store_name = ?", (req.user_email, req.store_name))
+    cur.execute("SELECT * FROM user_information WHERE email = ? and store_name = ?", (email, store_name))
 
     row = cur.fetchone()
     conn.close()
@@ -94,7 +92,7 @@ def store_info(req: StoreInfoRequest):
     
     return result
 
-def update_store(user_info: UserInformation):
+def update_store(user_info: UserInformation, email):
     if not os.path.exists(DB_PATH):
         os.makedirs(DATA_DIR, exist_ok=True)
         _make_db()
@@ -129,14 +127,15 @@ def update_store(user_info: UserInformation):
         user_info.mood,
         user_info.event,
         user_info.tone,
-        user_info.email,
+        email,
         user_info.store_name   
     ))
 
     conn.commit()
     conn.close()
 
-def delete_store(req: StoreInfoRequest):
+def delete_store(email, store_name):
+    # 데이터베이스 내의 정보 삭제
     if not os.path.exists(DB_PATH):
         os.makedirs(DATA_DIR, exist_ok=True)
         _make_db()
@@ -147,7 +146,32 @@ def delete_store(req: StoreInfoRequest):
     cur.execute("""
         DELETE FROM user_information
         WHERE email = ? AND store_name = ?
-    """, (req.user_email, req.store_name))
+    """, (email, store_name))
 
     conn.commit()
     conn.close()
+
+    # 이미지 등 생성한 정보 삭제
+    store_folder_path = os.path.join(DATA_DIR, email, store_name)
+
+    if os.path.exists(store_folder_path):
+        shutil.rmtree(store_folder_path)
+
+def input_check(userinfo: UserInformation):
+    missing_fields = []
+    if not userinfo.store_name.strip():
+        missing_fields.append("상호명")
+    if not userinfo.category_main.strip():
+        missing_fields.append("업종 대분류")
+    if not userinfo.category_sub.strip():
+        missing_fields.append("업종 소분류")
+    if not userinfo.call_number.strip():
+        missing_fields.append("연락처")
+    if not userinfo.address.strip():
+        missing_fields.append("주소")
+    for menu_index, menu in enumerate(userinfo.menus, start=1):
+        for key, key_ko in zip(['name', 'price'], ['메뉴명', '가격']):
+            if not menu[key]:
+                missing_fields.append(f"{menu_index}번 메뉴의 {key_ko}")
+    
+    return missing_fields

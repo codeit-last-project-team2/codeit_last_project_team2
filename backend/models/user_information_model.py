@@ -6,10 +6,9 @@ class Menu(BaseModel):
     img_path: Optional[str]  
     name: str
     price: Union[int, float]
-    desc: str
+    desc: Union[str]
 
 class UserInformation(BaseModel):
-    email: str
     store_name: str
     category_main: str
     category_sub: str
@@ -23,9 +22,5 @@ class UserInformation(BaseModel):
     event: Optional[str]
     tone: Optional[str]
 
-class StoresRequest(BaseModel):
-    user_email: str
-
 class StoreInfoRequest(BaseModel):
-    user_email: str
     store_name: str

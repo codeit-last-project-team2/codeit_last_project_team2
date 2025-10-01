@@ -17,9 +17,8 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # 경로 설정
 FONT_PATH = "data/font/NanumGothic.ttf"
-DATA_DIR = os.path.join("data", "images")
-DB_PATH = os.path.join(DATA_DIR, "adgen.db")
-os.makedirs(DATA_DIR, exist_ok=True)
+BASE_DIR = os.path.join("data", "user_info")
+DB_PATH = os.path.join(BASE_DIR, "database.db")
 
 # JSON 파서
 def parse_json_block(text: str):
@@ -107,6 +106,8 @@ def generate_image(req: PosterImageRequest, email: str):
         y += font_body.size + 5
 
     # 저장
+    DATA_DIR = os.path.join(BASE_DIR, email, "poster_img")
+    os.makedirs(DATA_DIR, exist_ok=True)
     filename = f"poster_{int(datetime.now().timestamp())}.png"
     save_path = os.path.join(DATA_DIR, filename)
     img.save(save_path)
@@ -115,15 +116,15 @@ def generate_image(req: PosterImageRequest, email: str):
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS ads (
+        CREATE TABLE IF NOT EXISTS poster (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT,
             text TEXT,
-            image_url TEXT,
+            image_path TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
-    cur.execute("INSERT INTO ads (email, text, image_url) VALUES (?, ?, ?)",
-                (email, f"{req.title}\n{req.body}", f"/images/{filename}"))
+    cur.execute("INSERT INTO poster (email, text, image_path) VALUES (?, ?, ?)",
+                (email, f"{req.title}\n{req.body}", save_path))
     conn.commit()
     conn.close()
 
@@ -137,7 +138,7 @@ def generate_image(req: PosterImageRequest, email: str):
 def get_history(email: str):
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
-    cur.execute("SELECT id, text, image_url, created_at FROM ads WHERE email = ? ORDER BY created_at DESC", (email,))
+    cur.execute("SELECT id, text, image_path, created_at FROM poster WHERE email = ? ORDER BY created_at DESC", (email,))
     rows = cur.fetchall()
     conn.close()
-    return [{"id": r[0], "text": r[1], "image_url": r[2], "created_at": r[3]} for r in rows]
+    return [{"id": r[0], "text": r[1], "image_path": r[2], "created_at": r[3]} for r in rows]
