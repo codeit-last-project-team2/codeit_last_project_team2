@@ -1,5 +1,5 @@
 ﻿import streamlit as st
-import requests, json
+import requests, json, time
 
 BACKEND_URL = "http://127.0.0.1:8000"
 
@@ -15,16 +15,18 @@ headers = {"Authorization": f"Bearer {st.session_state.token}"}
 
 with st.form("mascot_form"):
     st.subheader("매장 선택")
-    store_list_res = requests.post(f"{BACKEND_URL}/userinfo/get_store_names", json={"user_email": st.session_state.get("user_email")}, headers=headers)
+    store_list_res = requests.get(f"{BACKEND_URL}/userinfo/get_store_names", headers=headers)
 
     if store_list_res.status_code != 200:
-        st.error("조회 실패")
-        st.text(store_list_res.status_code)
+        st.error(f"조회 실패, error code: {store_list_res.status_code}")
+        st.stop()
     else:
         stores = store_list_res.json()
 
     if len(stores) == 0:
         st.text("등록된 매장이 없습니다.")
+        make = st.form_submit_button('홈페이지 생성', disabled=True)
+        st.stop()
     else:
         selected_store = st.radio("매장을 선택하세요:", stores, horizontal=True)
 
@@ -44,11 +46,11 @@ with st.form("mascot_form"):
         store_info["selling_points"] = json.loads(store_info["selling_points"])
 
     # 샘플 문서
-    sample_id = st.selectbox("sample_id 선택", options=['1'])
+    sample_id = st.selectbox("참고 템플릿 선택", options=['1'])
     store_info['sample_id'] = sample_id
 
-    st.markdown("[샘플 1 보기](https://codeit-last-project-team2.github.io/homepage/sample_pages/sample1.html)")
-    make = st.form_submit_button('홈페이지 생성', )
+    st.markdown("[템플릿 1 보기](https://codeit-last-project-team2.github.io/homepage/sample_pages/sample1.html)")
+    make = st.form_submit_button('홈페이지 생성')
 
 # -----------------------------
 # 실행
@@ -73,13 +75,26 @@ if make:
         homepage_res = requests.post(f"{BACKEND_URL}/homepage/upload", json=github_req, headers=headers)
         if homepage_res.status_code != 200:
             st.error(f"홈페이지 업로드 실패: {homepage_res.text}")
+            st.stop()
+
+        homepage_url = homepage_res.json()
+
+        st.success("✅ GitHub에 홈페이지 업로드 요청 완료!")
+        st.info("GitHub Pages가 활성화되기까지 기다리는 중...")
+
+        # 최대 60초 동안 확인
+        for i in range(12):
+            try:
+                resp = requests.get(homepage_url, timeout=5)
+                if resp.status_code == 200:
+                    st.success("🌍 홈페이지가 준비되었습니다!")
+                    st.markdown(f"[홈페이지 보러가기]({homepage_url})")
+                    break
+            except:
+                pass
+            time.sleep(5)
         else:
-            homepage_url = homepage_res.json() 
-
-            st.success("✅ GitHub에 홈페이지 업로드 완료!")
-
-            # --- GitHub Pages 주소 안내 ---
-            st.markdown(f"🌍 [홈페이지 보러가기]({homepage_url})")
+            st.warning("아직 준비되지 않았습니다. 몇 분 뒤 다시 시도해주세요.")
             st.text(f"홈페이지 주소: {homepage_url}")
 
     except Exception as e:

@@ -1,5 +1,5 @@
 ﻿import streamlit as st
-import requests
+import requests, os, datetime
 
 BACKEND_URL = "http://127.0.0.1:8000"
 
@@ -23,13 +23,17 @@ if "mascot_info" not in st.session_state:
     st.session_state.mascot_info = {}
 
 # -----------------------------
+# 저장 경로 설정
+# -----------------------------
+BASE_MASCOT_SAVE_DIR = os.path.join("data", "user_info", st.session_state.get("user_email"))
+
+# -----------------------------
 # 입력 UI
 # -----------------------------
 with st.form("mascot_form"):
     st.subheader("매장 선택")
-    store_list_res = requests.post(
+    store_list_res = requests.get(
         f"{BACKEND_URL}/userinfo/get_store_names",
-        json={"user_email": st.session_state.get("user_email")},
         headers=headers,
     )
 
@@ -43,6 +47,9 @@ with st.form("mascot_form"):
     if len(stores) == 0:
         st.text("등록된 매장이 없습니다.")
         selected_store = None
+        submitted = st.form_submit_button("마스코트 생성하기", disabled=True)
+        st.stop()
+
     else:
         selected_store = st.radio("매장을 선택하세요:", stores, horizontal=True)
 
@@ -98,15 +105,26 @@ if submitted and selected_store and store_info:
         st.session_state.mascot_info = mascot_req
 
         # ✅ 자동 저장 (생성 시 히스토리에 추가)
+        MASCOT_SAVE_DIR = os.path.join(BASE_MASCOT_SAVE_DIR, store_info["store_name"], 'mascot_img')
+        os.makedirs(MASCOT_SAVE_DIR, exist_ok=True)
         for url in mascot_urls:
-            save_req = {
-                "user_email": st.session_state.get("user_email"),
-                "store_name": mascot_req["store_name"],
-                "keyword": mascot_req["keyword"],
-                "mascot_personality": mascot_req["mascot_personality"],
-                "url": url,
-            }
-            save_res = requests.post(f"{BACKEND_URL}/mascot/save", json=save_req, headers=headers)
+            response = requests.get(url)
+            if response.status_code == 200:
+                filename = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')}.png"
+                filepath = os.path.join(MASCOT_SAVE_DIR, filename)
+        
+                # 저장
+                with open(filepath, "wb") as f:
+                    f.write(response.content)
+                    
+                save_req = {
+                    "user_email": st.session_state.get("user_email"),
+                    "store_name": mascot_req["store_name"],
+                    "keyword": mascot_req["keyword"],
+                    "mascot_personality": mascot_req["mascot_personality"],
+                    "path": filepath,
+                }
+                save_res = requests.post(f"{BACKEND_URL}/mascot/save", json=save_req, headers=headers)
         st.success("✅ 생성된 마스코트가 히스토리에 자동 저장되었습니다!")
 
 # -----------------------------
@@ -122,15 +140,16 @@ if hist_res.status_code == 200:
         for i, ad in enumerate(histories, 1):
             st.write(f"### {i}. {ad['keyword']} / {ad['mascot_personality']}")
             st.image(
-                ad["url"],
+                ad["path"],
                 caption=f"{ad['store_name']} - {ad['created_at']}",
                 use_container_width=True,
             )
 
             # PNG/JPG 다운로드 버튼 (항목별 제공)
-            img_res = requests.get(ad["url"])
-            if img_res.status_code == 200:
-                img_bytes = img_res.content
+            try:
+                with open(ad["path"], "rb") as f:
+                    img_bytes = f.read()
+
                 col1, col2 = st.columns([1, 1])
                 with col1:
                     st.download_button(
@@ -146,5 +165,7 @@ if hist_res.status_code == 200:
                         file_name=f"mascot_{i}.jpg",
                         mime="image/jpeg",
                     )
+            except FileNotFoundError:
+                st.warning("❌ 이미지 파일을 찾을 수 없습니다.")
 else:
     st.error("히스토리 조회 실패")

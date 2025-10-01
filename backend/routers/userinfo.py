@@ -1,56 +1,37 @@
 ﻿
 import os
-from fastapi import APIRouter, Depends, UploadFile, File
-from backend.models.user_information_model import UserInformation, StoresRequest, StoreInfoRequest
-from backend.services.userinformation_service import upload_store, update_store, store_names, store_info, delete_store
+from fastapi import APIRouter, Depends
+from backend.models.user_information_model import UserInformation, StoreInfoRequest
+from backend.services.userinformation_service import upload_store, update_store, store_names, store_info, delete_store, input_check
 from backend.auth import get_current_user
-
-from fastapi.staticfiles import StaticFiles
-
-
-DATA_DIR = os.path.join("Data", "user_info")
-DB_PATH = os.path.join(DATA_DIR, "database.db")
 
 router = APIRouter(prefix="/userinfo", tags=["userinfo"])
 
 @router.post("/upload")
 def upload_store_info(req: UserInformation, user=Depends(get_current_user)):
-    return upload_store(req)
+    email = user["email"]
+    return upload_store(req, email)
 
 @router.post("/update")
 def upload_store_info(req: UserInformation, user=Depends(get_current_user)):
-    return update_store(req)
+    email = user["email"]
+    return update_store(req, email)
 
-@router.post("/get_store_names")
-def get_store_name(req: StoresRequest):
-    return store_names(req)
+@router.get("/get_store_names")
+def get_store_name(user=Depends(get_current_user)):
+    email = user["email"]
+    return store_names(email)
 
 @router.post("/get_store_info")
-def get_store_name(req: StoreInfoRequest):
-    return store_info(req)
+def get_store_name(req: StoreInfoRequest, user=Depends(get_current_user)):
+    email = user["email"]
+    return store_info(store_name=req.store_name, email=email)
 
 @router.post("/delete_store")
-def get_store_name(req: StoreInfoRequest):
-    return delete_store(req)
+def get_store_name(req: StoreInfoRequest, user=Depends(get_current_user)):
+    email = user["email"]
+    return delete_store(store_name=req.store_name, email=email)
 
-
-@router.post("/upload_image/{token}/{store_name}/menu/{menu_idx}")
-async def upload_menu_image(
-    token: str,
-    store_name: str,
-    menu_idx: int,
-    file: UploadFile = File(...),
-    user=Depends(get_current_user)   
-):
-    folder = os.path.join(DATA_DIR, token, store_name, "menus")
-    os.makedirs(folder, exist_ok=True)
-
-    _, ext = os.path.splitext(file.filename)
-    filename = f"menu_{menu_idx}{ext}"
-    save_path = os.path.join(folder, filename)
-
-    with open(save_path, "wb") as f:
-        f.write(await file.read())
-
-    url_path = f"/static/{token}/{store_name}/menus/{filename}"
-    return {"path": url_path}
+@router.post("/check")
+def userinfo_check(req: UserInformation, user=Depends(get_current_user)):
+    return input_check(userinfo=req)
