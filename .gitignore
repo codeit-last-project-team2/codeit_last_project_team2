@@ -17,7 +17,7 @@ notebook/
 data/*
 
 # 단, sample, font 폴더는 추적
-!data/font/
-!data/font/**
+!data/fonts
+!data/fonts/**
 !data/sample/
 !data/sample/**
