@@ -4,6 +4,8 @@
 import streamlit as st
 import requests
 
+BACKEND_URL = "http://127.0.0.1:8000"
+
 st.title("광고 문구 생성")
 
 # 토큰 체크
@@ -40,15 +42,13 @@ model = st.selectbox("모델 선택 (gpt-5 : 긴 문장에 추천)", ["gpt-4.1-m
 if uploaded_file and st.button("이미지로 문구 생성"):
     files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
     data = {"tone": tone, "length": length, "num_copies": num_copies, "model": model}
-    headers = {}
 
-    if BACKEND_API_KEY:
-        headers["x-api-key"] = BACKEND_API_KEY
     try:
         with st.spinner("생성 중... (이미지 → 모델 호출)"):
             r = requests.post(f"{BACKEND_URL}/adcopy/image", files=files, data=data, headers=headers, timeout=120)
             r.raise_for_status()
             result = r.json()
+            
         st.subheader("생성 결과")
         copies = result.get("copies", [])
         if copies:
