@@ -1,6 +1,4 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional
-from backend.models.user_information_model import Menu
+from pydantic import BaseModel
 
 class HomepageRequest(BaseModel):
     email: str

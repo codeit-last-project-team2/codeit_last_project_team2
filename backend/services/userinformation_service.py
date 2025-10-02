@@ -25,7 +25,7 @@ def _make_db():
 def upload_store(user_info: UserInformation, email):
     if not os.path.exists(DB_PATH):
         os.makedirs(DATA_DIR, exist_ok=True)
-        _make_db()
+    _make_db()
 
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
@@ -49,7 +49,7 @@ def upload_store(user_info: UserInformation, email):
 def store_names(email):
     if not os.path.exists(DB_PATH):
         os.makedirs(DATA_DIR, exist_ok=True)
-        _make_db()
+    _make_db()
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     cur.execute("SELECT store_name FROM user_information WHERE email = ?", (email,))
@@ -64,7 +64,7 @@ def store_names(email):
 def store_info(store_name, email):
     if not os.path.exists(DB_PATH):
         os.makedirs(DATA_DIR, exist_ok=True)
-        _make_db()
+    _make_db()
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
@@ -79,7 +79,7 @@ def store_info(store_name, email):
 def update_store(user_info: UserInformation, email):
     if not os.path.exists(DB_PATH):
         os.makedirs(DATA_DIR, exist_ok=True)
-        _make_db()
+    _make_db()
 
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
@@ -108,7 +108,7 @@ def delete_store(email, store_name):
     # 데이터베이스 내의 정보 삭제
     if not os.path.exists(DB_PATH):
         os.makedirs(DATA_DIR, exist_ok=True)
-        _make_db()
+    _make_db()
 
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
