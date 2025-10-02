@@ -9,15 +9,6 @@ class HomepageRequest(BaseModel):
     category_sub: str
     call_number: str
     address: str
-    menus: List[Menu]
-    targets: Optional[List[str]]
-    selling_points: Optional[List[str]]
-    ad_purpose: Optional[str]
-    mood: Optional[str]
-    event: Optional[str]
-    tone: Optional[str]
-    sample_id: str
-
 
 class GithubUploadRequest(BaseModel):
     html: str

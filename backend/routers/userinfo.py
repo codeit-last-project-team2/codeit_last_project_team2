@@ -2,7 +2,7 @@
 import os
 from fastapi import APIRouter, Depends
 from backend.models.user_information_model import UserInformation, StoreInfoRequest
-from backend.services.userinformation_service import upload_store, update_store, store_names, store_info, delete_store, input_check
+from backend.services.userinformation_service import upload_store, update_store, store_names, store_info, delete_store
 from backend.auth import get_current_user
 
 router = APIRouter(prefix="/userinfo", tags=["userinfo"])
@@ -31,7 +31,3 @@ def get_store_name(req: StoreInfoRequest, user=Depends(get_current_user)):
 def get_store_name(req: StoreInfoRequest, user=Depends(get_current_user)):
     email = user["email"]
     return delete_store(store_name=req.store_name, email=email)
-
-@router.post("/check")
-def userinfo_check(req: UserInformation, user=Depends(get_current_user)):
-    return input_check(userinfo=req)

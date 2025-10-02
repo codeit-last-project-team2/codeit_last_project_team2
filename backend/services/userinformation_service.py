@@ -15,13 +15,6 @@ def _make_db():
         category_sub TEXT NOT NULL, 
         call_number TEXT NOT NULL, 
         address TEXT NOT NULL, 
-        menus TEXT NOT NULL, 
-        targets TEXT, 
-        selling_points TEXT, 
-        ad_purpose TEXT, 
-        mood TEXT, 
-        event TEXT, 
-        tone TEXT, 
         PRIMARY KEY (email, store_name) 
     ) 
     """)
@@ -39,9 +32,8 @@ def upload_store(user_info: UserInformation, email):
 
     cur.execute("""
     INSERT INTO user_information (
-        email, store_name, category_main, category_sub, call_number, address,
-        menus, targets, selling_points, ad_purpose, mood, event, tone
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        email, store_name, category_main, category_sub, call_number, address
+    ) VALUES (?, ?, ?, ?, ?, ?)
     """, (
         email,
         user_info.store_name,
@@ -49,13 +41,6 @@ def upload_store(user_info: UserInformation, email):
         user_info.category_sub,
         user_info.call_number,
         user_info.address,
-        json.dumps([menu.model_dump() for menu in user_info.menus], ensure_ascii=False),
-        json.dumps(user_info.targets, ensure_ascii=False) if user_info.targets else None,
-        json.dumps(user_info.selling_points, ensure_ascii=False) if user_info.selling_points else None,
-        user_info.ad_purpose,
-        user_info.mood,
-        user_info.event,
-        user_info.tone,
     ))
 
     conn.commit()
@@ -89,7 +74,6 @@ def store_info(store_name, email):
     conn.close()
 
     result = dict(row)
-    
     return result
 
 def update_store(user_info: UserInformation, email):
@@ -107,26 +91,12 @@ def update_store(user_info: UserInformation, email):
         category_sub = ?,
         call_number = ?,
         address = ?,
-        menus = ?,
-        targets = ?,
-        selling_points = ?,
-        ad_purpose = ?,
-        mood = ?,
-        event = ?,
-        tone = ?
     WHERE email = ? AND store_name = ?
     """, (
         user_info.category_main,
         user_info.category_sub,
         user_info.call_number,
         user_info.address,
-        json.dumps([menu.model_dump() for menu in user_info.menus], ensure_ascii=False),
-        json.dumps(user_info.targets, ensure_ascii=False) if user_info.targets else None,
-        json.dumps(user_info.selling_points, ensure_ascii=False) if user_info.selling_points else None,
-        user_info.ad_purpose,
-        user_info.mood,
-        user_info.event,
-        user_info.tone,
         email,
         user_info.store_name   
     ))
@@ -153,25 +123,31 @@ def delete_store(email, store_name):
 
     # 이미지 등 생성한 정보 삭제
     store_folder_path = os.path.join(DATA_DIR, email, store_name)
-
     if os.path.exists(store_folder_path):
         shutil.rmtree(store_folder_path)
 
-def input_check(userinfo: UserInformation):
-    missing_fields = []
-    if not userinfo.store_name.strip():
-        missing_fields.append("상호명")
-    if not userinfo.category_main.strip():
-        missing_fields.append("업종 대분류")
-    if not userinfo.category_sub.strip():
-        missing_fields.append("업종 소분류")
-    if not userinfo.call_number.strip():
-        missing_fields.append("연락처")
-    if not userinfo.address.strip():
-        missing_fields.append("주소")
-    for menu_index, menu in enumerate(userinfo.menus, start=1):
-        for key, key_ko in zip(['name', 'price'], ['메뉴명', '가격']):
-            if not menu[key]:
-                missing_fields.append(f"{menu_index}번 메뉴의 {key_ko}")
-    
-    return missing_fields
+def drop_table_if_has_column(table_name, column_name, db_path=DB_PATH):
+    # 1. DB 파일이 존재하는지 확인
+    if not os.path.exists(db_path):
+        return
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+
+    # 2. 테이블 존재 여부 확인
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?;", (table_name,))
+    if cur.fetchone() is None:
+        conn.close()
+        return
+
+    # 3. 컬럼 존재 여부 확인
+    cur.execute(f"PRAGMA table_info({table_name});")
+    columns = [row[1] for row in cur.fetchall()]
+
+    if column_name in columns:
+        cur.execute(f"DROP TABLE {table_name};")
+        conn.commit()
+
+    conn.close()
+
+drop_table_if_has_column("user_information", "menus")
