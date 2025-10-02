@@ -59,6 +59,6 @@ from backend import auth
 app.include_router(auth.router)
 app.include_router(poster.router)
 app.include_router(mascot.router)
-app.include_router(homepage.router)
+# app.include_router(homepage.router)
 app.include_router(cardnews.router)
 app.include_router(userinfo.router)

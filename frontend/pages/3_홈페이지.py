@@ -1,101 +1,47 @@
-﻿import streamlit as st
-import requests, json, time
+﻿# import streamlit as st
+# import requests
 
-BACKEND_URL = "http://127.0.0.1:8000"
+# BACKEND_URL = "http://127.0.0.1:8000"
 
-st.title("가게 홈페이지 자동 생성기")
-# -----------------------------
-# 세션 값 확인
-# -----------------------------
-if not st.session_state.get("token"):
-    st.warning("⚠️ 로그인이 필요합니다. 홈에서 로그인하세요.")
-    st.stop()
+# st.set_page_config(page_title="홈페이지 생성", layout="wide")
+# st.title("🌐 홈페이지 생성")
 
-headers = {"Authorization": f"Bearer {st.session_state.token}"}
+# if not st.session_state.get("token"):
+#     st.warning("⚠️ 로그인이 필요합니다. 홈에서 로그인하세요.")
+#     st.stop()
 
-with st.form("mascot_form"):
-    st.subheader("매장 선택")
-    store_list_res = requests.get(f"{BACKEND_URL}/userinfo/get_store_names", headers=headers)
+# headers = {"Authorization": f"Bearer {st.session_state.token}"}
+# store = st.session_state.get("store_profile", {})
 
-    if store_list_res.status_code != 200:
-        st.error(f"조회 실패, error code: {store_list_res.status_code}")
-        st.stop()
-    else:
-        stores = store_list_res.json()
+# menus = []
+# st.subheader("메뉴 입력")
+# menu_count = st.number_input("메뉴 개수", min_value=1, max_value=10, value=3)
 
-    if len(stores) == 0:
-        st.text("등록된 매장이 없습니다.")
-        make = st.form_submit_button('홈페이지 생성', disabled=True)
-        st.stop()
-    else:
-        selected_store = st.radio("매장을 선택하세요:", stores, horizontal=True)
+# for i in range(menu_count):
+#     st.markdown(f"#### 메뉴 {i+1}")
+#     name = st.text_input(f"메뉴명 {i+1}", key=f"menu_name_{i}")
+#     price = st.text_input(f"가격 {i+1}", key=f"menu_price_{i}")
+#     feature = st.text_area(f"특징/장점 {i+1}", key=f"menu_feature_{i}")
+#     if name and price:
+#         menus.append({"name": name, "price": price, "feature": feature})
 
-    store_info_res = requests.post(f"{BACKEND_URL}/userinfo/get_store_info", json={"user_email": st.session_state.get("user_email"), "store_name": selected_store}, headers=headers)
+# style = st.text_input("홈페이지 톤앤매너", placeholder="예: 모던하고 심플한 스타일")
+# purpose = st.text_input("홈페이지 목적", placeholder="예: 가게 홍보, 신규 고객 유치")
 
-    if store_info_res.status_code != 200:
-        st.error("조회 실패")
-        st.text(store_info_res.status_code)
-    else:
-        store_info = store_info_res.json()
-
-    if isinstance(store_info["menus"], str):
-        store_info["menus"] = json.loads(store_info["menus"])
-    if isinstance(store_info["targets"], str):
-        store_info["targets"] = json.loads(store_info["targets"])
-    if isinstance(store_info["selling_points"], str):
-        store_info["selling_points"] = json.loads(store_info["selling_points"])
-
-    # 샘플 문서
-    sample_id = st.selectbox("참고 템플릿 선택", options=['1'])
-    store_info['sample_id'] = sample_id
-
-    st.markdown("[템플릿 1 보기](https://codeit-last-project-team2.github.io/homepage/sample_pages/sample1.html)")
-    make = st.form_submit_button('홈페이지 생성')
-
-# -----------------------------
-# 실행
-# -----------------------------
-if make:
-    st.info("홈페이지를 생성 중입니다...")
-
-    # --- HTML 템플릿 생성 ---
-    html_res = requests.post(f"{BACKEND_URL}/homepage/generate", json=store_info, headers=headers)
-
-    if html_res.status_code != 200:
-        st.error(f"홈페이지 생성 실패: {html_res.text}")
-    else:
-        html = html_res.json() 
-    try:
-        github_req = {
-            'html': html,
-            'email': store_info.get('email'),
-            'store_name': store_info.get('store_name')
-        }
-
-        homepage_res = requests.post(f"{BACKEND_URL}/homepage/upload", json=github_req, headers=headers)
-        if homepage_res.status_code != 200:
-            st.error(f"홈페이지 업로드 실패: {homepage_res.text}")
-            st.stop()
-
-        homepage_url = homepage_res.json()
-
-        st.success("✅ GitHub에 홈페이지 업로드 요청 완료!")
-        st.info("GitHub Pages가 활성화되기까지 기다리는 중...")
-
-        # 최대 60초 동안 확인
-        for i in range(12):
-            try:
-                resp = requests.get(homepage_url, timeout=5)
-                if resp.status_code == 200:
-                    st.success("🌍 홈페이지가 준비되었습니다!")
-                    st.markdown(f"[홈페이지 보러가기]({homepage_url})")
-                    break
-            except:
-                pass
-            time.sleep(5)
-        else:
-            st.warning("아직 준비되지 않았습니다. 몇 분 뒤 다시 시도해주세요.")
-            st.text(f"홈페이지 주소: {homepage_url}")
-
-    except Exception as e:
-        st.error(f"업로드 중 오류 발생: {e}")
+# if st.button("홈페이지 생성", type="primary"):
+#     payload = {
+#         "email": st.session_state.get("user_email"),
+#         "store_name": store.get("store_name", ""),
+#         "category": store.get("category", ""),
+#         "phone": store.get("phone", ""),
+#         "address": store.get("address", ""),
+#         "menus": menus,
+#         "style": style,
+#         "purpose": purpose,
+#     }
+#     r = requests.post(f"{BACKEND_URL}/homepage/generate", json=payload, headers=headers)
+#     if r.status_code == 200:
+#         st.success("홈페이지가 생성되었습니다 ✅")
+#         st.download_button("📥 HTML 다운로드", r.content, file_name="homepage.html", mime="text/html")
+#     else:
+#         st.error("생성 실패")

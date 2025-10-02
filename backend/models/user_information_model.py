@@ -1,26 +1,15 @@
-﻿from pydantic import BaseModel
+﻿from pydantic import BaseModel, Field
 
-from typing import List, Optional, Union
+class UserInformationRequest(BaseModel):
+    email: str = Field(..., description="사용자 이메일")
+    store_name: str = Field(..., description="매장명")
+    category: str = Field(..., description="업종")
+    phone: str = Field(..., description="연락처")
+    address: str = Field(..., description="주소")
 
-class Menu(BaseModel):
-    img_path: Optional[str]  
-    name: str
-    price: Union[int, float]
-    desc: Union[str]
-
-class UserInformation(BaseModel):
+class UserInformationResponse(BaseModel):
+    email: str
     store_name: str
-    category_main: str
-    category_sub: str
-    call_number: str
+    category: str
+    phone: str
     address: str
-    menus: List[Menu]
-    targets: Optional[List[str]]
-    selling_points: Optional[List[str]]
-    ad_purpose: Optional[str]
-    mood: Optional[str]
-    event: Optional[str]
-    tone: Optional[str]
-
-class StoreInfoRequest(BaseModel):
-    store_name: str

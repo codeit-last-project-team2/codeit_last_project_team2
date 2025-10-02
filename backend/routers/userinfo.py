@@ -1,37 +1,16 @@
-﻿
-import os
-from fastapi import APIRouter, Depends
-from backend.models.user_information_model import UserInformation, StoreInfoRequest
-from backend.services.userinformation_service import upload_store, update_store, store_names, store_info, delete_store, input_check
+﻿from fastapi import APIRouter, Depends
+from backend.models.user_information_model import UserInformationRequest
+from backend.services.userinformation_service import save_user_info, get_user_info
 from backend.auth import get_current_user
 
 router = APIRouter(prefix="/userinfo", tags=["userinfo"])
 
-@router.post("/upload")
-def upload_store_info(req: UserInformation, user=Depends(get_current_user)):
-    email = user["email"]
-    return upload_store(req, email)
+# 매장 정보 저장/업데이트
+@router.post("/save")
+def save_info(req: UserInformationRequest, user=Depends(get_current_user)):
+    return save_user_info(req)
 
-@router.post("/update")
-def upload_store_info(req: UserInformation, user=Depends(get_current_user)):
-    email = user["email"]
-    return update_store(req, email)
-
-@router.get("/get_store_names")
-def get_store_name(user=Depends(get_current_user)):
-    email = user["email"]
-    return store_names(email)
-
-@router.post("/get_store_info")
-def get_store_name(req: StoreInfoRequest, user=Depends(get_current_user)):
-    email = user["email"]
-    return store_info(store_name=req.store_name, email=email)
-
-@router.post("/delete_store")
-def get_store_name(req: StoreInfoRequest, user=Depends(get_current_user)):
-    email = user["email"]
-    return delete_store(store_name=req.store_name, email=email)
-
-@router.post("/check")
-def userinfo_check(req: UserInformation, user=Depends(get_current_user)):
-    return input_check(userinfo=req)
+# 매장 정보 조회
+@router.get("/{email}")
+def read_info(email: str, user=Depends(get_current_user)):
+    return get_user_info(email)
