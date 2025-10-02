@@ -54,7 +54,7 @@ os.makedirs(IMAGES_DIR, exist_ok=True)
 app.mount("/images", StaticFiles(directory=IMAGES_DIR), name="images")
 
 # --- 라우터 등록 ---
-from backend.routers import poster, mascot, homepage, cardnews, userinfo
+from backend.routers import poster, mascot, homepage, cardnews, userinfo, adcopy
 from backend import auth
 app.include_router(auth.router)
 app.include_router(poster.router)
@@ -62,3 +62,4 @@ app.include_router(mascot.router)
 app.include_router(homepage.router)
 app.include_router(cardnews.router)
 app.include_router(userinfo.router)
+app.include_router(adcopy.router)

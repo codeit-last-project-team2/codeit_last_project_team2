@@ -2,8 +2,15 @@
 
 fastapi
 uvicorn
-python-multipart
-openai
-streamlit
-requests
+pydantic
 python-dotenv
+openai
+PyGithub
+Pillow
+requests
+pyjwt
+authlib
+starlette
+streamlit
+numpy
+python-multipart

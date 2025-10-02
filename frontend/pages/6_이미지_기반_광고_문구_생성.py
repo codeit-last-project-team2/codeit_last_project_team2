@@ -2,16 +2,16 @@
 
 # frontend/pages/image_text.py
 import streamlit as st
-import os
 import requests
-
-from dotenv import load_dotenv, find_dotenv
-load_dotenv(find_dotenv())   # 최상위에 있는 .env 파일 자동 로드
 
 st.title("광고 문구 생성")
 
-BACKEND_URL = st.secrets.get("BACKEND_URL") or os.getenv("BACKEND_URL", "http://localhost:8000")
-BACKEND_API_KEY = st.secrets.get("BACKEND_API_KEY") or os.getenv("BACKEND_API_KEY", None)
+# 토큰 체크
+if not st.session_state.get("token"):
+    st.warning("⚠️ 로그인이 필요합니다. 홈에서 로그인하세요.")
+    st.stop()
+
+headers = {"Authorization": f"Bearer {st.session_state.token}"}
 
 # ------------------------
 # 2️⃣ 옵션 토글 / 선택
@@ -41,6 +41,7 @@ if uploaded_file and st.button("이미지로 문구 생성"):
     files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
     data = {"tone": tone, "length": length, "num_copies": num_copies, "model": model}
     headers = {}
+
     if BACKEND_API_KEY:
         headers["x-api-key"] = BACKEND_API_KEY
     try:

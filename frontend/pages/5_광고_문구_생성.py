@@ -1,20 +1,19 @@
 # 사용자로부터 브랜드/상품/톤/길이/개수/모델 입력 받아 백엔드 /poster/text 호출. 원문(디버그) + 파싱 결과 표시.
 
 # frontend/pages/create_text.py
-import os
 import requests
 import streamlit as st
-from dotenv import load_dotenv, find_dotenv
 
-load_dotenv(find_dotenv())   # 최상위에 있는 .env 파일 자동 로드
+BACKEND_URL = "http://127.0.0.1:8000"
 
 st.title("광고 문구 생성")
 
-# ------------------------
-# 환경 변수 / secrets
-# ------------------------
-BACKEND_URL = st.secrets.get("BACKEND_URL") or os.getenv("BACKEND_URL", "http://localhost:8000")
-BACKEND_API_KEY = st.secrets.get("BACKEND_API_KEY") or os.getenv("BACKEND_API_KEY", None)
+# 환경 체크
+if not st.session_state.get("token"):
+    st.warning("⚠️ 로그인이 필요합니다. 홈에서 로그인하세요.")
+    st.stop()
+
+headers = {"Authorization": f"Bearer {st.session_state.token}"}
 
 # ------------------------
 # 백엔드 호출 함수
@@ -27,10 +26,8 @@ def generate_ad_copy(product, num_copies, tone, length, model):
         "num_copies": num_copies,
         "model": model,
     }
-    headers = {}
-    if BACKEND_API_KEY:
-        headers["x-api-key"] = BACKEND_API_KEY
     r = requests.post(f"{BACKEND_URL}/adcopy/text", json=payload, headers=headers, timeout=60)
+
     if r.ok:
         return r.json()
     else:

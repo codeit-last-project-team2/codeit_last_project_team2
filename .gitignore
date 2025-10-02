@@ -2,6 +2,18 @@
 .env
 frontend/.streamlit/secrets.toml
 
+# --- personal dotfiles (never commit) ---
+.bashrc
+.bash_logout
+.profile
+.lesshst
+.ssh/
+.wget-hsts
+.bash_history
+.python_history
+.dotnet/
+.vscode-server/
+
 # --- python 캐시/가상환경 ---
 __pycache__/
 *.pyc
@@ -32,3 +44,14 @@ frontend/.streamlit/cache/
 .bash_history
 .python_history
 .wget-hsts
+
+# --- generated data / DB (산출물) ---
+# 모든 DB 파일
+*.db
+*.sqlite
+*.sqlite3
+
+# 런타임 생성 폴더
+data/images/          # 포스터 이미지 저장 위치
+Data/user_info/       # 사용자 정보 DB/이미지 업로드 위치(대문자 주의)
+data/mascot_history.db
