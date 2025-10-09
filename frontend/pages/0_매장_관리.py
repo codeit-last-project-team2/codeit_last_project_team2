@@ -64,7 +64,7 @@ if st.button("💾 매장 정보 저장"):
         "phone": phone,
         "address": address
     }
-    r = requests.post(f"{BACKEND_URL}/userinfo", json=payload, headers=headers)
+    r = requests.post(f"{BACKEND_URL}/userinfo/save", json=payload, headers=headers)
     if r.status_code == 200:
         st.success("✅ 매장 정보가 저장되었습니다.")
         st.session_state.store_profile = payload
