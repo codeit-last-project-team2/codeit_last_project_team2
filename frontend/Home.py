@@ -78,7 +78,7 @@ ENABLED = _get_enabled_providers()  # NEW
 # NEW: 토큰 검증해 세션 보강 (/me 호출)
 def _verify_and_fill(token: str):  # NEW
     try:
-        me = requests.get(f"{BACKEND_URL}/me",
+        me = requests.get(f"{BACKEND_URL}/auth/me",
                           headers={"Authorization": f"Bearer {token}"},
                           timeout=5)
         if me.status_code == 200:
@@ -106,7 +106,7 @@ if tok:
     try:
         headers = {"Authorization": f"Bearer {st.session_state.token}"}
         email = st.session_state.user_email
-        r = requests.get(f"{BACKEND_URL}/userinfo/{email}", headers=headers)
+        r = requests.get(f"{BACKEND_URL}/auth/userinfo/{email}", headers=headers)
         if r.status_code == 200:
             data = r.json()
             if "message" not in data:
@@ -230,7 +230,7 @@ else:
 
         # ── 로컬(아이디/비번) 회원가입·로그인 폼 ──
          # ── 로컬(아이디/비번) 회원가입·로그인: 버튼을 '세로로' 한 행씩 ──
-        email = st.text_input("아이디", key="login_id", label_visibility="collapsed", placeholder="이메일")
+        email = st.text_input("아이디", key="login_id", label_visibility="collapsed", placeholder="아이디")
         pw = st.text_input("비밀번호", key="login_pw", label_visibility="collapsed",
                            placeholder="비밀번호", type="password")
 
@@ -241,20 +241,21 @@ else:
         # ── 액션 처리 ──
         if do_signup:
             if not email or not pw:
-                st.warning("이메일과 비밀번호를 입력해주세요.")
+                st.warning("아이디와 비밀번호를 입력해주세요.")
             else:
                 try:
+                    username = (email or "").strip()
                     r = requests.post(
-                        f"{BACKEND_URL}/auth/signup",
-                        json={"email": email.strip(), "password": pw, "name": email.split("@")[0]},
-                        timeout=8
+                    f"{BACKEND_URL}/auth/signup",
+                    json={"username": username, "password": pw, "name": username},
+                    timeout=8
                     )
                     r.raise_for_status()
                     js = r.json()
                     st.session_state.token = js["token"]
-                    st.session_state.user_email = js["user"]["email"]
-                    st.session_state.user_name = js["user"].get("name") or ""
-                    st.session_state.provider = "local"
+                    st.session_state.user_name  = js["user"].get("name") or js["user"]["username"]
+                    st.session_state.user_email = js["user"]["username"]   # 식별자용
+                    st.session_state.provider   = "local"
                     st.success("회원가입 완료! 로그인 상태가 되었습니다.")
                     st.rerun()
                 except Exception as e:
@@ -265,17 +266,18 @@ else:
                 st.warning("이메일과 비밀번호를 입력해주세요.")
             else:
                 try:
+                    username = (email or "").strip()
                     r = requests.post(
-                        f"{BACKEND_URL}/auth/login",
-                        json={"email": email.strip(), "password": pw},
-                        timeout=8
-                    )
+                    f"{BACKEND_URL}/auth/login",
+                    json={"username": username, "password": pw},
+                    timeout=8
+                )
                     r.raise_for_status()
                     js = r.json()
-                    st.session_state.token = js["token"]
-                    st.session_state.user_email = js["user"]["email"]
-                    st.session_state.user_name = js["user"].get("name") or ""
-                    st.session_state.provider = "local"
+                    st.session_state.token      = js["token"]
+                    st.session_state.user_name  = js["user"].get("name") or js["user"]["username"]
+                    st.session_state.user_email = js["user"]["username"]   # BEFORE에선 email로 되어 있었음
+                    st.session_state.provider   = "local"
                     st.success("로그인 성공!")
                     st.rerun()
                 except Exception as e:
