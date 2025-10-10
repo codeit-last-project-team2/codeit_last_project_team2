@@ -9,7 +9,7 @@ st.title("🏪 매장 관리")
 # 로그인 체크
 if not st.session_state.get("token"):
     st.warning("⚠️ 로그인이 필요합니다. 홈에서 로그인하세요.")
-    st.stop()
+    st.stop()   
 
 headers = {"Authorization": f"Bearer {st.session_state.token}"}
 user_email = st.session_state.get("user_email")

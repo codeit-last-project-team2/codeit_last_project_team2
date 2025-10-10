@@ -11,3 +11,4 @@ authlib==1.6.4
 starlette==0.47.3
 streamlit==1.48.1
 numpy==2.2.6
+bcrypt==5.0.0

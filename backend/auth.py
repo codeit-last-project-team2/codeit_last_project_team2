@@ -3,229 +3,244 @@ import jwt
 import bcrypt
 import sqlite3
 import secrets
-import requests as pyrequests
-from datetime import datetime, timedelta
-from urllib.parse import urlencode
-from fastapi import APIRouter, HTTPException, Request, Depends, Header
-from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, EmailStr
+import traceback
+from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi.responses import RedirectResponse, JSONResponse, PlainTextResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from starlette.requests import Request as StarletteRequest
 from dotenv import load_dotenv
+from authlib.integrations.starlette_client import OAuth
 
+# =====================================================
+# ✅ 환경 변수 로드
+# =====================================================
 load_dotenv()
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
-# =============================
+# -----------------------------------------------------
 # 기본 설정
-# =============================
-SECRET_KEY = os.getenv("JWT_SECRET", "super-secret-key")
+# -----------------------------------------------------
+JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24시간
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8501")
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://127.0.0.1:8000/auth/google/callback")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:8501")
 
-# DB 설정
-DB_DIR = "data/user_info"
-DB_PATH = os.path.join(DB_DIR, "users.db")
-os.makedirs(DB_DIR, exist_ok=True)
+NAVER_CLIENT_ID     = os.getenv("NAVER_CLIENT_ID")
+NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
+NAVER_REDIRECT_URI  = os.getenv("NAVER_REDIRECT_URI")
 
-# =============================
-# DB 초기화
-# =============================
-def init_user_table():
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            email TEXT PRIMARY KEY,
-            name TEXT,
-            password TEXT,
-            auth_source TEXT DEFAULT 'local', -- local | google
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    conn.commit()
-    conn.close()
+KAKAO_CLIENT_ID     = os.getenv("KAKAO_CLIENT_ID")
+KAKAO_CLIENT_SECRET = os.getenv("KAKAO_CLIENT_SECRET")
+KAKAO_REDIRECT_URI  = os.getenv("KAKAO_REDIRECT_URI")
 
-init_user_table()
+# 사용 가능 여부 플래그
+HAS_NAVER  = bool(NAVER_CLIENT_ID and NAVER_CLIENT_SECRET and NAVER_REDIRECT_URI)
+HAS_KAKAO  = bool(KAKAO_CLIENT_ID and KAKAO_REDIRECT_URI)
 
-# =============================
-# JWT 관련 함수
-# =============================
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+# -----------------------------------------------------
+# JWT 및 보안 의존성
+# -----------------------------------------------------
+security = HTTPBearer(auto_error=False)
 
-
-def verify_token(token: str):
+def get_current_user(creds: HTTPAuthorizationCredentials = Depends(security)):
+    """FastAPI Depends 인증용"""
+    if not creds:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing auth token")
+    token = creds.credentials
     try:
-        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM], leeway=10)
+        return payload
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid auth token")
 
+# -----------------------------------------------------
+# OAuth 클라이언트 등록
+# -----------------------------------------------------
+oauth = OAuth()
 
-# =============================
-# 모델 정의
-# =============================
-class RegisterRequest(BaseModel):
-    email: EmailStr
-    password: str
-    name: str
+if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+    raise RuntimeError("⚠️ GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET 환경변수를 설정하세요.")
 
+oauth.register(
+    name="google",
+    client_id=GOOGLE_CLIENT_ID,
+    client_secret=GOOGLE_CLIENT_SECRET,
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
 
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-
-# =============================
-# 1️⃣ 회원가입
-# =============================
-@router.post("/register")
-def register(req: RegisterRequest):
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM users WHERE email=?", (req.email,))
-    existing = cur.fetchone()
-    if existing:
-        source = existing[3] if len(existing) > 3 else "unknown"
-        if source == "google":
-            raise HTTPException(status_code=400, detail="이미 Google 계정으로 가입된 이메일입니다.")
-        else:
-            raise HTTPException(status_code=400, detail="이미 존재하는 이메일입니다.")
-
-    hashed_pw = bcrypt.hashpw(req.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-    cur.execute(
-        "INSERT INTO users (email, name, password, auth_source) VALUES (?, ?, ?, 'local')",
-        (req.email, req.name, hashed_pw),
+if HAS_NAVER:
+    oauth.register(
+        name="naver",
+        client_id=NAVER_CLIENT_ID,
+        client_secret=NAVER_CLIENT_SECRET,
+        authorize_url="https://nid.naver.com/oauth2.0/authorize",
+        access_token_url="https://nid.naver.com/oauth2.0/token",
+        api_base_url="https://openapi.naver.com/v1/",
+        client_kwargs={"token_endpoint_auth_method": "client_secret_post"},
     )
-    conn.commit()
-    conn.close()
 
-    return {"message": "회원가입 성공"}
+if HAS_KAKAO:
+    oauth.register(
+        name="kakao",
+        client_id=KAKAO_CLIENT_ID,
+        client_secret=KAKAO_CLIENT_SECRET,
+        authorize_url="https://kauth.kakao.com/oauth/authorize",
+        access_token_url="https://kauth.kakao.com/oauth/token",
+        api_base_url="https://kapi.kakao.com/",
+        client_kwargs={"token_endpoint_auth_method": "client_secret_post"},
+    )
 
+# =====================================================
+# ✅ 사용 가능 OAuth 목록
+# =====================================================
+@router.get("/enabled")
+async def auth_enabled():
+    return {"google": True, "naver": HAS_NAVER, "kakao": HAS_KAKAO}
 
-# =============================
-# 2️⃣ 로그인
-# =============================
-@router.post("/login")
-def login(req: LoginRequest):
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("SELECT email, name, password, auth_source FROM users WHERE email=?", (req.email,))
-    user = cur.fetchone()
-    conn.close()
-
-    if not user:
-        raise HTTPException(status_code=400, detail="존재하지 않는 계정입니다.")
-    if user[3] == "google":
-        raise HTTPException(status_code=400, detail="Google 로그인으로만 접속 가능한 계정입니다.")
-
-    if not bcrypt.checkpw(req.password.encode("utf-8"), user[2].encode("utf-8")):
-        raise HTTPException(status_code=400, detail="비밀번호가 올바르지 않습니다.")
-
-    token = create_access_token({"email": user[0], "name": user[1]})
-    return {"token": token, "name": user[1], "email": user[0]}
-
-
-# =============================
-# 3️⃣ Google 로그인 (OAuth)
-# =============================
+# =====================================================
+# ✅ GOOGLE 로그인
+# =====================================================
 @router.get("/google/login")
-def google_login():
-    state = secrets.token_urlsafe(16)
-    params = {
-        "client_id": GOOGLE_CLIENT_ID,
-        "redirect_uri": GOOGLE_REDIRECT_URI,
-        "response_type": "code",
-        "scope": "openid email profile",
-        "access_type": "offline",
-        "state": state,
-        "prompt": "consent",
-    }
-    url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
-    return RedirectResponse(url)
+async def google_login(request: StarletteRequest):
+    redirect_uri = request.url_for("google_callback")
+    return await oauth.google.authorize_redirect(request, redirect_uri)
 
+@router.head("/google/login")
+async def google_login_head():
+    return PlainTextResponse("", status_code=200)
 
-# =============================
-# 4️⃣ Google 콜백
-# =============================
 @router.get("/google/callback")
-def google_callback(request: Request, code: str = None, state: str = None):
-    # 1. 토큰 요청
-    token_url = "https://oauth2.googleapis.com/token"
-    data = {
-        "code": code,
-        "client_id": GOOGLE_CLIENT_ID,
-        "client_secret": GOOGLE_CLIENT_SECRET,
-        "redirect_uri": GOOGLE_REDIRECT_URI,
-        "grant_type": "authorization_code",
-    }
-    token_resp = pyrequests.post(token_url, data=data)
-    token_json = token_resp.json()
-    access_token = token_json.get("access_token")
+async def google_callback(request: StarletteRequest):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+        user_info = token.get("userinfo")
+        if not user_info:
+            raise HTTPException(status_code=400, detail="Google OAuth failed")
 
-    # 2. 유저 정보 가져오기
-    user_info = pyrequests.get(
-        "https://www.googleapis.com/oauth2/v2/userinfo",
-        headers={"Authorization": f"Bearer {access_token}"}
-    ).json()
+        email = user_info["email"]
+        name = user_info.get("name", "")
+        sub = user_info.get("sub", "")
 
-    email = user_info.get("email")
-    name = user_info.get("name", email.split("@")[0])
+        now = datetime.now(timezone.utc)
+        exp = now + timedelta(hours=2)
 
-    # 3. DB에 없으면 생성
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM users WHERE email=?", (email,))
-    user = cur.fetchone()
+        payload = {
+            "sub": sub,
+            "email": email,
+            "name": name,
+            "provider": "google",
+            "iss": "adgen-api",
+            "iat": int(now.timestamp()),
+            "exp": int(exp.timestamp()),
+        }
 
-    if not user:
-        cur.execute(
-            "INSERT INTO users (email, name, auth_source) VALUES (?, ?, 'google')",
-            (email, name)
-        )
-        conn.commit()
-    conn.close()
+        app_jwt = jwt.encode(payload, JWT_SECRET, algorithm=ALGORITHM)
+        target = f"{FRONTEND_URL}/?token={app_jwt}&name={name}&email={email}"
+        return RedirectResponse(url=target)
+    except Exception:
+        print("GOOGLE CALLBACK ERROR:\n", traceback.format_exc())
+        return JSONResponse({"error": "OAuth callback failed"}, status_code=500)
 
-    # 4. JWT 발급
-    token = create_access_token({"email": email, "name": name})
+# =====================================================
+# ✅ NAVER 로그인
+# =====================================================
+@router.get("/naver/login")
+async def naver_login(request: StarletteRequest):
+    if not HAS_NAVER:
+        raise HTTPException(status_code=501, detail="Naver OAuth not configured")
+    redirect_uri = NAVER_REDIRECT_URI
+    return await oauth.naver.authorize_redirect(request, redirect_uri)
 
-    # 5. 프론트엔드로 리다이렉트
-    redirect_url = f"{FRONTEND_URL}?token={token}&email={email}&name={name}"
-    return RedirectResponse(redirect_url)
+@router.get("/naver/callback")
+async def naver_callback(request: StarletteRequest):
+    try:
+        token = await oauth.naver.authorize_access_token(request)
+        resp = await oauth.naver.get("nid/me", token=token)
+        data = resp.json().get("response", {}) if resp else {}
 
+        sub = data.get("id")
+        email = data.get("email") or f"{sub}@naver-user.local"
+        name = data.get("name") or data.get("nickname") or "NaverUser"
 
-# =============================
-# 5️⃣ 내 정보 확인
-# =============================
+        now = datetime.now(timezone.utc)
+        exp = now + timedelta(hours=2)
+        payload = {
+            "sub": sub,
+            "email": email,
+            "name": name,
+            "provider": "naver",
+            "iss": "adgen-api",
+            "iat": int(now.timestamp()),
+            "exp": int(exp.timestamp()),
+        }
+        app_jwt = jwt.encode(payload, JWT_SECRET, algorithm=ALGORITHM)
+        target = f"{FRONTEND_URL}/?token={app_jwt}&name={name}&email={email}"
+        return RedirectResponse(url=target)
+    except Exception:
+        print("NAVER CALLBACK ERROR:\n", traceback.format_exc())
+        return JSONResponse({"error": "Naver OAuth callback failed"}, status_code=500)
+
+# =====================================================
+# ✅ KAKAO 로그인
+# =====================================================
+@router.get("/kakao/login")
+async def kakao_login(request: StarletteRequest):
+    if not HAS_KAKAO:
+        raise HTTPException(status_code=501, detail="Kakao OAuth not configured")
+    params = {"scope": "profile_nickname"}
+    return await oauth.kakao.authorize_redirect(request, KAKAO_REDIRECT_URI, **params)
+
+@router.get("/kakao/callback")
+async def kakao_callback(request: StarletteRequest):
+    try:
+        token = await oauth.kakao.authorize_access_token(request)
+        resp = await oauth.kakao.get("v2/user/me", token=token)
+        info = resp.json() if resp else {}
+
+        kid = info.get("id")
+        acc = info.get("kakao_account") or {}
+        profile = acc.get("profile") or {}
+        name = profile.get("nickname") or "KakaoUser"
+        email = acc.get("email") or f"{kid}@kakao-user.local"
+
+        now = datetime.now(timezone.utc)
+        exp = now + timedelta(hours=2)
+        payload = {
+            "sub": str(kid),
+            "email": email,
+            "name": name,
+            "provider": "kakao",
+            "iss": "adgen-api",
+            "iat": int(now.timestamp()),
+            "exp": int(exp.timestamp()),
+        }
+
+        app_jwt = jwt.encode(payload, JWT_SECRET, algorithm=ALGORITHM)
+        target = f"{FRONTEND_URL}/?token={app_jwt}&name={name}&email={email}"
+        return RedirectResponse(url=target)
+    except Exception:
+        print("KAKAO CALLBACK ERROR:\n", traceback.format_exc())
+        return JSONResponse({"error": "Kakao OAuth callback failed"}, status_code=500)
+
+# =====================================================
+# ✅ 세션 검증용 /auth/me (Home.py 호환)
+# =====================================================
 @router.get("/me")
-def get_me(token: str = Depends(lambda request: request.headers.get("Authorization", "").replace("Bearer ", ""))):
-    payload = verify_token(token)
-    return {"email": payload["email"], "name": payload.get("name")}
-
-
-# =============================
-# 6️⃣ 현재 로그인 사용자 확인 (Depends용)
-# =============================
-def get_current_user(Authorization: str = Header(None)):
-    """
-    FastAPI Depends()에서 사용하는 인증 함수.
-    라우터에서 user=Depends(get_current_user)로 호출하면,
-    JWT를 검증하고 {'email': ..., 'name': ...}을 리턴.
-    """
-    if not Authorization:
-        raise HTTPException(status_code=401, detail="Authorization header missing")
-
-    token = Authorization.replace("Bearer ", "")
-    payload = verify_token(token)
-
-    return {"email": payload["email"], "name": payload.get("name")}
+async def auth_me(creds: HTTPAuthorizationCredentials = Depends(security)):
+    if not creds:
+        return JSONResponse({"detail": "Missing token"}, status_code=status.HTTP_401_UNAUTHORIZED)
+    token = creds.credentials
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM], leeway=10)
+        return {
+            "email": payload.get("email"),
+            "name": payload.get("name"),
+            "provider": payload.get("provider", "google"),
+        }
+    except Exception:
+        return JSONResponse({"detail": "Invalid token"}, status_code=status.HTTP_401_UNAUTHORIZED)
