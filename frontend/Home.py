@@ -3,6 +3,45 @@ import requests
 import os
 import glob
 import base64
+from pathlib import Path
+
+# ── 로고 탐색: 여러 후보 경로를 자동으로 뒤져서 첫 번째 존재 파일을 사용 ──
+def _find_logo_path() -> Path | None:
+    here = Path(__file__).resolve().parent            # .../frontend
+    repo = here.parent                                # 프로젝트 루트 가정
+
+    candidates = [
+        here / "data" / "images" / "ai_team2_logo.png",   # frontend/data/images/...
+        repo / "data" / "images" / "ai_team2_logo.png",   # 루트/data/images/...
+        here / "data" / "images" / "logo.png",
+        repo / "data" / "images" / "logo.png",
+        Path("data/images/ai_team2_logo.png").resolve(),  # 실행 위치 기준
+        Path("data/images/logo.png").resolve(),
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
+
+def _to_data_uri(p: Path | None) -> str | None:
+    if not p or not p.exists():
+        return None
+    ext = p.suffix.lower().lstrip(".")
+    if ext == "jpg": ext = "jpeg"
+    data = p.read_bytes()
+    b64 = base64.b64encode(data).decode()
+    return f"data:image/{ext};base64,{b64}"
+
+LOGO_PATH = _find_logo_path()
+LOGO_DATA_URI = _to_data_uri(LOGO_PATH)
+
+def _img_data_uri(path: Path | None) -> str | None:
+    if not path or not path.exists():
+        return None
+    b64 = base64.b64encode(path.read_bytes()).decode()
+    ext = path.suffix.lower().lstrip(".")
+    if ext == "jpg": ext = "jpeg"
+    return f"data:image/{ext};base64,{b64}"
 
 BACKEND_URL = "http://localhost:8000"
 
@@ -126,72 +165,134 @@ if st.session_state.get("token"):
         if st.button("로그아웃", use_container_width=True):
             _logout()  # CHANGED
 else:
-    # --- 로그인 영역 전용 스타일 ---
+    # --- (중립) 로그인 영역 전용 최소 스타일 ---
     st.markdown("""
     <style>
-      .login-wrap{
+    /* 로그인 카드 컨테이너 */
+    .login-wrap {
         max-width: 420px;
-        margin: -80px auto 0;          /* 더 위로: -100px 등으로 조절 */
+        margin: -40px auto 0;
         text-align: center;
-      }
-      /* '파2팀' ↔ '광고 제작 서비스' 간격은 gap으로 */
-      .login-head{
-        display: flex; flex-direction: column; align-items: center;
-        gap: 25px;                      /* ← 둘 사이 간격 */
-        margin-bottom: 10px;            /* ← 입력폼과의 간격 */
-      }
-      .login-pill{
-        display: inline-flex; align-items: center; justify-content: center;
-        padding: 12px 30px; border-radius: 9999px;
-        background: linear-gradient(180deg,#FFE66D,#FFC800);
-        box-shadow: 0 10px 20px rgba(255,200,0,.35), inset 0 2px 0 #FFF7B8;
-      }
-      .pill-text{
-        font-weight: 900; font-size: 22px; letter-spacing: 1.5px; color:#111;
-        text-shadow: 0 1px 0 rgba(255,255,255,.6);
-      }
-      .login-title{
-        font-weight: 800; font-size: 26px; margin: 0;  /* 제목을 배지 바로 아래에 붙임 */
-      }
-      .help-link{
-        display:block; text-align:center; margin:12px 0 6px;
-        color:#2E5AAC; font-weight:800; text-decoration:none;
-      }
-      .help-link:hover{ text-decoration: underline; }
+    }
 
-      /* 모바일 여백 보정 (선택) */
-      @media (max-width: 480px){
-        .login-wrap{ margin: -40px 12px 0; }
-      }
+    /* 로고: 항상 가운데, 폭 제한 */
+    .logo {
+        max-width: 140px;
+        height: auto;
+        display: block;
+        margin: 0 auto 8px;   /* 아래로 살짝 여백 */
+    }
+
+    /* 보조 중앙 정렬 유틸 (필요 시 사용) */
+    .center {
+        display: block;
+        margin: 0 auto;
+    }
+
+    /* 제목 */
+    .login-title {
+        font-weight: 800;
+        font-size: 30px;
+        margin: 4px 0 14px;
+        text-align: center;
+    }
+
+    /* 도움 링크 */
+    .help-link {
+        display: block;
+        text-align: center;
+        margin: 10px 0 0;
+        font-weight: 700;
+        text-decoration: none;
+    }
+    .help-link:hover {
+        text-decoration: underline;
+    }
     </style>
     """, unsafe_allow_html=True)
+
 
     _l, _c, _r = st.columns([1,2,1])
     with _c:
         st.markdown('<div class="login-wrap">', unsafe_allow_html=True)
-        # 파2팀(위) + 제목(아래)
-        st.markdown("""
-        <div class="login-head">
-          <div class="login-pill"><span class="pill-text">파2팀</span></div>
-          <div class="login-title">광고 제작 서비스</div>
-        </div>
-        """, unsafe_allow_html=True)
+        # 🔹 로고 표시 (항상 정중앙)
+        c1, c2, c3 = st.columns([1, 2, 1])  # 가운데 컬럼만 사용
+        with c2:
+            if LOGO_PATH and LOGO_PATH.exists():
+                st.image(str(LOGO_PATH), use_container_width=False, width=140)
+            elif LOGO_DATA_URI:
+                st.markdown(
+                    f'<img src="{LOGO_DATA_URI}" style="display:block;margin:0 auto;max-width:140px;height:auto;">',
+                    unsafe_allow_html=True
+                )
 
-        # 입력/버튼 (원본 보존)
-        st.text_input("아이디", key="login_id", label_visibility="collapsed", placeholder="아이디")
-        st.text_input("비밀번호", key="login_pw", label_visibility="collapsed", placeholder="비밀번호", type="password")
+        st.markdown('<div class="login-title">광고 제작 서비스</div>', unsafe_allow_html=True)
 
-        # CHANGED: 소셜 로그인 버튼을 '가용한 경우'에만 노출
+        # ── 로컬(아이디/비번) 회원가입·로그인 폼 ──
+         # ── 로컬(아이디/비번) 회원가입·로그인: 버튼을 '세로로' 한 행씩 ──
+        email = st.text_input("아이디", key="login_id", label_visibility="collapsed", placeholder="이메일")
+        pw = st.text_input("비밀번호", key="login_pw", label_visibility="collapsed",
+                           placeholder="비밀번호", type="password")
+
+        # 각각 '다른 행'으로 배치
+        do_login  = st.button("로그인", use_container_width=True, key="btn_login")
+        do_signup = st.button("회원가입", use_container_width=True, key="btn_signup")
+
+        # ── 액션 처리 ──
+        if do_signup:
+            if not email or not pw:
+                st.warning("이메일과 비밀번호를 입력해주세요.")
+            else:
+                try:
+                    r = requests.post(
+                        f"{BACKEND_URL}/auth/signup",
+                        json={"email": email.strip(), "password": pw, "name": email.split("@")[0]},
+                        timeout=8
+                    )
+                    r.raise_for_status()
+                    js = r.json()
+                    st.session_state.token = js["token"]
+                    st.session_state.user_email = js["user"]["email"]
+                    st.session_state.user_name = js["user"].get("name") or ""
+                    st.session_state.provider = "local"
+                    st.success("회원가입 완료! 로그인 상태가 되었습니다.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"회원가입 실패: {e}")
+
+        if do_login:
+            if not email or not pw:
+                st.warning("이메일과 비밀번호를 입력해주세요.")
+            else:
+                try:
+                    r = requests.post(
+                        f"{BACKEND_URL}/auth/login",
+                        json={"email": email.strip(), "password": pw},
+                        timeout=8
+                    )
+                    r.raise_for_status()
+                    js = r.json()
+                    st.session_state.token = js["token"]
+                    st.session_state.user_email = js["user"]["email"]
+                    st.session_state.user_name = js["user"].get("name") or ""
+                    st.session_state.provider = "local"
+                    st.success("로그인 성공!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"로그인 실패: {e}")
+
+        st.markdown("---")
+
+        # ── 소셜 로그인: 백엔드에서 활성화된 것만 노출 ──
         if ENABLED.get("google"):
-            st.link_button("Google로 로그인", f"{BACKEND_URL}/auth/google/login", use_container_width=True)  # CHANGED
-        if ENABLED.get("naver"):  # NEW
+            st.link_button("Google로 로그인", f"{BACKEND_URL}/auth/google/login", use_container_width=True)
+        if ENABLED.get("naver"):
             st.link_button("네이버로 로그인", f"{BACKEND_URL}/auth/naver/login", use_container_width=True)
-        if ENABLED.get("kakao"):  # NEW
+        if ENABLED.get("kakao"):
             st.link_button("카카오로 로그인", f"{BACKEND_URL}/auth/kakao/login", use_container_width=True)
 
         st.markdown('<a class="help-link" href="#">아이디 / 비밀번호 찾기 &gt;</a>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)  # .login-wrap 닫기
-
 st.divider()
 
 # -----------------------------
