@@ -4,6 +4,9 @@ from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 import os, datetime
 
+from utils.init_session import init_common_session
+init_common_session()
+
 BACKEND_URL = "http://127.0.0.1:8000"
 
 st.set_page_config(page_title="포스터 광고 생성", page_icon="🖼️", layout="wide")

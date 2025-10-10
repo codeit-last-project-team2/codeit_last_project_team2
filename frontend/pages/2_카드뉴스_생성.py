@@ -67,6 +67,7 @@ if "project" not in st.session_state:
 
         "font_path": None,
         "font_size": 48,
+        "font_color": (20, 20, 20),  # ✅ 추가: 폰트 색상 기본값
         "overlay_opacity": 100,
     }
 
@@ -90,25 +91,21 @@ def export_zip(images: List[Image.Image]) -> bytes:
 
 def place_overlay(canvas: Image.Image, overlay: Image.Image,
                   opacity: int = 100) -> Image.Image:
-    """오버레이를 배경 중앙에 80% 면적으로 배치 (투명도만 적용)"""
     can = canvas.convert("RGBA")
     W, H = can.size
     ov = overlay.convert("RGBA")
 
-    # 크기 조정 (배경 면적의 80% 정도)
     target_area = int(W * H * 0.8)
     ratio = ov.width / max(1, ov.height)
     new_w = int((target_area * ratio) ** 0.5)
     new_h = max(1, int(new_w / ratio))
     ov = ov.resize((new_w, new_h), Image.LANCZOS)
 
-    # 투명도 조절
     if opacity < 100:
         alpha = ov.split()[-1]
         alpha = alpha.point(lambda p: int(p * (opacity / 100.0)))
         ov.putalpha(alpha)
 
-    # 중앙 배치
     x = W // 2 - ov.width // 2
     y = H // 2 - ov.height // 2
     can.paste(ov, (x, y), ov)
@@ -132,7 +129,7 @@ def load_font(path: str, size: int) -> ImageFont.FreeTypeFont:
         return ImageFont.load_default()
 
 # -----------------------------
-# 0) 카드뉴스 입력 정보
+# 0) 기본 정보 입력
 # -----------------------------
 st.markdown("### 📋 0) 기본 정보 입력")
 col1, col2 = st.columns(2)
@@ -211,7 +208,6 @@ if st.button("🖼️ 배경 만들기/적용"):
     proj["base_images"] = new_bases
     st.success("배경 적용 완료 ✅")
 
-    # ✅ 배경 미리보기
     if proj["base_images"]:
         st.markdown("**배경 미리보기**")
         cols = st.columns(min(4, len(proj["base_images"])) or 1)
@@ -249,15 +245,13 @@ if use_overlay:
 
     proj["overlay_opacity"] = st.slider("오버레이 투명도 (%)", 0, 100, proj["overlay_opacity"])
 
-    # ✅ 배경+오버레이 합성 미리보기
     if proj.get("overlay_images") and proj.get("base_images"):
         st.markdown("**배경 + 오버레이 적용 미리보기**")
         cols = st.columns(min(4, len(proj["base_images"])) or 1)
         for i, bg in enumerate(proj["base_images"]):
             with cols[i % len(cols)]:
                 ov = proj["overlay_images"][i % len(proj["overlay_images"])]
-                preview = place_overlay(bg, ov,
-                                        opacity=proj["overlay_opacity"])
+                preview = place_overlay(bg, ov, opacity=proj["overlay_opacity"])
                 st.image(preview, caption=f"페이지 {i+1}", width="stretch")
 
 # -----------------------------
@@ -275,19 +269,23 @@ else:
 
 proj["font_size"] = st.slider("폰트 크기", 20, 100, proj["font_size"])
 
+# ✅ 폰트 색상 선택 추가
+font_color_hex = st.color_picker("폰트 색상", "#141414")
+proj["font_color"] = hex_to_rgb(font_color_hex)
+
 # ✅ 폰트 미리보기
 if proj["font_path"]:
     try:
         font = load_font(proj["font_path"], proj["font_size"])
         preview_img = Image.new("RGB", (600, 120), "white")
         d = ImageDraw.Draw(preview_img)
-        d.text((20, 40), "폰트 미리보기 ABC 가나다", font=font, fill=(0, 0, 0))
+        d.text((20, 40), "폰트 미리보기 ABC 가나다", font=font, fill=proj["font_color"])
         st.image(preview_img, caption="폰트 미리보기", width="stretch")
     except Exception as e:
         st.warning(f"폰트 로드 실패: {e}")
 
 # -----------------------------
-# 5) 합성
+# 5) 합성 (중앙 + 폰트 색상)
 # -----------------------------
 st.markdown("### ✒️ 5) 합성")
 if st.button("합성 실행"):
@@ -296,17 +294,21 @@ if st.button("합성 실행"):
         im = bg.copy().convert("RGBA")
         text = proj["page_texts"][i] if i < len(proj["page_texts"]) else ""
 
-        # 1️⃣ 먼저 오버레이 적용
         if use_overlay and proj.get("overlay_images"):
             ov = proj["overlay_images"][i % len(proj["overlay_images"])]
-            im = place_overlay(im, ov,
-                               opacity=proj["overlay_opacity"])
+            im = place_overlay(im, ov, opacity=proj["overlay_opacity"])
 
-        # 2️⃣ 그 위에 텍스트
         font = load_font(proj["font_path"], proj["font_size"])
         wrapped = wrap_text_simple(text)
         draw = ImageDraw.Draw(im)
-        draw.text((50, 50), wrapped, fill=(20, 20, 20, 255), font=font)
+        text_bbox = draw.multiline_textbbox((0, 0), wrapped, font=font, spacing=8)
+        text_w = text_bbox[2] - text_bbox[0]
+        text_h = text_bbox[3] - text_bbox[1]
+        W, H = im.size
+        x = (W - text_w) / 2
+        y = (H - text_h) / 2
+        draw.multiline_text((x, y), wrapped, fill=proj["font_color"],
+                            font=font, align="center", spacing=8)
 
         finals.append(im.convert("RGB"))
     proj["final_images"] = finals
