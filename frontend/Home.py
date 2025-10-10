@@ -343,7 +343,7 @@ features = [
         "title": "🎨 카드 섹션 광고 생성",
         "desc": "업로드한 이미지를 흑백, 블러, 텍스트 오버레이 등으로 꾸밀 수 있습니다.",
         "image": cardnews_images,
-        "page": "pages/2_카드_광고_생성.py"
+        "page": "pages/2_카드뉴스_copy.py"
     },
     {
         "title": "📝 홈페이지 생성",
@@ -372,7 +372,7 @@ for i in range(0, len(features), 2):
     cols = st.columns(2)
     for j, feature in enumerate(features[i:i+2]):
         with cols[j]:
-            st.subheader(feature["title"])
+            st.page_link(feature["page"], label=feature["title"])
             st.caption(feature["desc"])
 
             # 여러 장 이미지 → 슬라이더로 출력
