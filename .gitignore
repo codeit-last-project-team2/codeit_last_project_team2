@@ -51,7 +51,11 @@ frontend/.streamlit/cache/
 *.sqlite
 *.sqlite3
 
-# 런타임 생성 폴더
-data/images/          # 포스터 이미지 저장 위치
-Data/user_info/       # 사용자 정보 DB/이미지 업로드 위치(대문자 주의)
-data/mascot_history.db
+# data 파일 무시
+data/*
+
+# 단, sample, font 폴더는 추적
+!data/fonts
+!data/fonts/**
+!data/sample/
+!data/sample/**
