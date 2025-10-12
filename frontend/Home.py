@@ -343,7 +343,7 @@ features = [
         "title": "🎨 카드 섹션 광고 생성",
         "desc": "업로드한 이미지를 흑백, 블러, 텍스트 오버레이 등으로 꾸밀 수 있습니다.",
         "image": cardnews_images,
-        "page": "pages/2_카드뉴스_copy.py"
+        "page": "pages/2_카드뉴스_생성.py"
     },
     {
         "title": "📝 홈페이지 생성",
@@ -429,39 +429,3 @@ for i in range(0, len(features), 2):
                     st.components.v1.html(slider_html, height=220, scrolling=False)
                 else:
                     st.warning("⚠️ 미리보기 이미지 없음")
-
-st.divider()
-
-# -----------------------------
-# 광고 히스토리 불러오기
-# -----------------------------
-st.header("📜 내 광고 히스토리")
-if not st.session_state.token:
-    st.warning("로그인 후 이용할 수 있습니다.")
-    st.stop()
-
-headers = {"Authorization": f"Bearer {st.session_state.token}"}
-
-if st.button("히스토리 불러오기"):
-    try:
-        res = requests.get(f"{BACKEND_URL}/poster/history", headers=headers, timeout=30)
-        js = res.json()
-        ads = js.get("history", [])
-        if not ads:
-            st.info("아직 생성된 광고가 없습니다 😅")
-        else:
-            for ad in ads:
-                with st.container(border=True):
-                    st.write(f"🕒 {ad['created_at']}")
-                    st.write(f"💬 문구: {ad['text']}")
-                    if ad.get("image_url"):
-                        url = f"{BACKEND_URL}{ad['image_url']}"
-                        st.image(url, caption="저장된 광고 이미지", use_container_width=True)
-                        st.download_button(
-                            "📥 이미지 다운로드",
-                            data=requests.get(url).content,
-                            file_name=f"poster_{ad['id']}.png",
-                            mime="image/png"
-                        )
-    except Exception as e:
-        st.error(f"히스토리 불러오기 실패: {e}")
