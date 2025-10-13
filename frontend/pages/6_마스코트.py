@@ -175,7 +175,7 @@ if st.button("📂 히스토리 불러오기"):
                     "image_bytes": img_bytes
                 })
 
-        st.success(f"✅ {len(st.session_state.mascot_history)}개의 포스터를 불러왔습니다!")
+        st.success(f"✅ {len(st.session_state.mascot_history)}개의 마스코트를 불러왔습니다!")
         
     except Exception as e:
         st.error(f"요청 오류: {e}")
