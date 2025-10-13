@@ -14,21 +14,6 @@ if not st.session_state.get("token"):
 headers = {"Authorization": f"Bearer {st.session_state.token}"}
 user_email = st.session_state.get("user_email")
 
-# 매장 정보 불러오기
-def fetch_info():
-    r = requests.get(f"{BACKEND_URL}/userinfo/{user_email}", headers=headers)
-    if r.status_code == 200:
-        data = r.json()
-        # 조회 실패 메시지일 경우 기본값 반환
-        if "message" in data:
-            return {"store_name": "", "category": "", "phone": "", "address": ""}
-        return data
-    return {"store_name": "", "category": "", "phone": "", "address": ""}
-
-# 세션 상태 초기화
-if "store_profile" not in st.session_state:
-    st.session_state.store_profile = fetch_info()
-
 profile = st.session_state.store_profile
 
 st.markdown("### ✏️ 매장 정보 입력/수정")
