@@ -205,12 +205,6 @@ if go:
             st.stop()
 
         img_bytes = BytesIO(img_res.content)
-        st.session_state.poster_history.append({
-            "title": text_data["title"],
-            "body": text_data["body"],
-            "dalle_prompt": text_data["dalle_prompt"],
-            "image_bytes": img_bytes.getvalue()
-        })
         st.success("✅ 포스터 생성 완료!")
         st.image(img_bytes, caption=text_data["title"], width=500)
 
