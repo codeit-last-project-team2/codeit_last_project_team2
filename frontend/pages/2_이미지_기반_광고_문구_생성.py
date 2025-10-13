@@ -10,8 +10,8 @@ st.title("✏ 이미지 기반 광고 문구 생성")
 
 # 토큰 체크
 if not st.session_state.get("token"):
- st.warning("⚠️ 로그인이 필요합니다. 홈에서 로그인하세요.")
- st.stop()
+    st.warning("⚠️ 로그인이 필요합니다. 홈에서 로그인하세요.")
+    st.stop()
 
 headers = {"Authorization": f"Bearer {st.session_state.token}"}
 
@@ -47,22 +47,33 @@ tone_options = ["친근한", "전문적인", "유머러스한", "감성적인", 
 selected_tones = st.multiselect("문구 스타일", tone_options)
 tone = ", ".join(selected_tones) if selected_tones else "기본"
 
-# 문구 길이 토글
-length_options = ["short", "long"]
-length_labels  = ["짧게 (1~2문장)", "길게 (3~4문장)"]
-length = st.selectbox("문구 길이", length_options, format_func=lambda x: length_labels[length_options.index(x)], index=1)
+# 길이 선택 (짧게/중간/길게)
+length_options = ["short", "medium", "long"]
+length_labels  = ["짧게 (1~2문장)", "중간 (2~3문장)", "길게 (4~5문장)"]
+length = st.selectbox(
+    "문구 길이",
+    length_options,
+    index=1,
+    format_func=lambda x: length_labels[length_options.index(x)]
+)
+
+# 길이에 따른 모델 자동 매핑
+MODEL_BY_LENGTH = {
+    "short":  "gpt-4.1-mini",
+    "medium": "gpt-5-mini",
+    "long":   "gpt-5",
+}
 
 # 생성 개수
 num_copies = st.number_input("생성할 문구 개수", min_value=1, max_value=10, value=3)
 
-# 모델 선택 토글
-model = st.selectbox("모델 선택 (gpt-5 : 긴 문장에 추천)", ["gpt-4.1-mini","gpt-4.1-nano","gpt-5","gpt-5-nano","gpt-5-mini"])
 
 # ------------------------
 # 3️⃣ 문구 생성 버튼
 # ------------------------
 if uploaded_file and st.button("이미지로 문구 생성"):
     files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
+    model = MODEL_BY_LENGTH.get(length, "gpt-5-mini")
     data = {"tone": tone, "length": length, "num_copies": num_copies, "model": model}
 
     try:
