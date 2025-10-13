@@ -212,6 +212,7 @@ if go:
             "image_bytes": img_bytes.getvalue()
         })
         st.success("✅ 포스터 생성 완료!")
+        st.image(img_bytes, caption=text_data["title"], width=500)
 
 # -----------------------------
 # 히스토리 불러오기
