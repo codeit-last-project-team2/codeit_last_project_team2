@@ -297,7 +297,7 @@ if proj.get("final_images"):
     cols = st.columns(min(4, len(proj["final_images"])) or 1)
     for i, im in enumerate(proj["final_images"]):
         with cols[i % len(cols)]:
-            st.image(im, caption=f"페이지 {i+1}", width="stretch")
+            st.image(im, caption=f"페이지 {i+1}", width=400)
 
     zip_bytes = export_zip_from_images(proj["final_images"])
     st.download_button(
