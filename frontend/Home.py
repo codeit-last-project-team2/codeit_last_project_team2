@@ -282,7 +282,7 @@ def _imgs(folder):
 
 poster_images  = _imgs(os.path.join(base_dir, "poster_sample"))
 cardnews_images= _imgs(os.path.join(base_dir, "cardnews_sample"))
-homepage_images= _imgs(os.path.join(base_dir, "homepage_img_sample"))
+homepage_images= _imgs(os.path.join(base_dir, "homepage_sample"))
 mascot_images  = _imgs(os.path.join(base_dir, "mascot_sample"))
 
 features = [
