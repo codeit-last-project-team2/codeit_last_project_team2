@@ -241,16 +241,38 @@ if st.button("📂 히스토리 불러오기"):
     # -----------------------------
     # 히스토리 표시 (선택버튼 제거)
     # -----------------------------
+    st.markdown("""
+    <style>
+    /* 포스터 썸네일 공통 스타일 */
+    .poster-grid img {
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     if st.session_state.poster_history:
-        for i, ad in enumerate(reversed(st.session_state.poster_history), 1):
-            st.write(f"### {i}. {ad['title']}")
-            st.write(ad["body"])
-            st.image(BytesIO(ad["image_bytes"]), caption="포스터", use_container_width=True)
-            st.download_button(
-                f"📥 다운로드 {i}",
-                data=ad["image_bytes"],
-                file_name=f"poster_{i}.png",
-                mime="image/png"
-            )
+        posters = list(reversed(st.session_state.poster_history))
+        num_cols = 3
+
+        for row_start in range(0, len(posters), num_cols):
+            cols = st.columns(num_cols, gap="small")
+            # 현재 줄의 포스터들
+            row_items = posters[row_start:row_start + num_cols]
+            for idx, (col, ad) in enumerate(zip(cols, row_items)):
+                with col:
+                    # 본문/캡션
+                    st.caption(ad["body"])
+                    # 이미지 (bytes 바로 사용)
+                    st.image(ad["image_bytes"], caption=None, use_container_width=True)
+                    # 다운로드 버튼 (고유 key 필수)
+                    st.download_button(
+                        "📥 다운로드",
+                        data=ad["image_bytes"],
+                        file_name=f"{ad['title'] or 'poster'}_{row_start+idx+1}.png",
+                        mime="image/png",
+                        use_container_width=True,
+                        key=f"download_{row_start}_{idx}"  # ← 고유 키
+                    )
     else:
         st.info("아직 생성된 포스터 히스토리가 없습니다.")
