@@ -183,7 +183,7 @@ if st.button("🖼️ 배경 만들기/적용"):
         cols = st.columns(min(4, len(proj["base_images"])) or 1)
         for i, im in enumerate(proj["base_images"]):
             with cols[i % len(cols)]:
-                st.image(im.convert("RGB"), caption=f"페이지 {i+1}", width="stretch")
+                st.image(im.convert("RGB"), caption=f"페이지 {i+1}", width=200)
 
 
 st.markdown("### 🎨 3) 오버레이")
