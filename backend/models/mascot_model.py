@@ -11,7 +11,6 @@ class MascotRequest(BaseModel):
     main_color: str = Field(..., description="대표 색상")
     keyword: str = Field(..., description="키워드")
     mascot_personality: str = Field(..., description="캐릭터 성격")
-    mood: Optional[str] = Field(None, description="브랜드 분위기")
     output_style: str = Field(..., description="출력 스타일 (예: 3D, 일러스트, 심플 로고 등)")
     additional_requirements: Optional[str] = Field(None, description="추가 요구사항")
 

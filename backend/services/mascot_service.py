@@ -36,7 +36,6 @@ def generate_mascot_url_candidates(req: MascotRequest, num:int=3):
     - 대표 색상: {req.main_color}
     - 키워드: {req.keyword}
     - 캐릭터 성격: {req.mascot_personality}
-    - 분위기: {req.mood or '기본'}
     - 출력 스타일: {req.output_style}
     - 추가 요구사항: {req.additional_requirements or '없음'}
 
