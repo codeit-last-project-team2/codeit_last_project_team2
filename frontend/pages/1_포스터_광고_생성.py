@@ -35,7 +35,7 @@ if "poster_history" not in st.session_state:
 st.markdown("### 🎯 광고 세부 정보 입력")
 ad_type = st.radio("광고할 대상 선택", ["브랜드", "제품", "이벤트"], horizontal=True)
 
-# ✅ 공통 도움말 (브랜드 설명 + 분위기/스타일)
+# ✅ 공통 도움말
 with st.expander("💡 광고 프롬프트 작성 가이드 보기"):
     st.markdown("""
     ### 🏪 브랜드 설명 & 🎨 광고 분위기·스타일 작성 가이드
@@ -97,17 +97,12 @@ with st.expander("💡 광고 프롬프트 작성 가이드 보기"):
 # 광고 유형별 입력
 # -----------------------------
 if ad_type == "브랜드":
-    brand_desc = st.text_area(
-        "브랜드에 대한 설명",
-        placeholder="예: 친환경 원두를 사용하는 감성 카페로, 부드러운 조명과 향긋한 커피 향이 특징이에요."
-    )
+    brand_desc = st.text_area("브랜드에 대한 설명", placeholder="예: 친환경 원두를 사용하는 감성 카페입니다.")
     extra_inputs = {"brand_desc": brand_desc}
-
 elif ad_type == "제품":
     product_name = st.text_input("제품명", placeholder="예: 수제 햄버거")
     product_feature = st.text_area("특징/장점", placeholder="예: 신선한 재료, 부드러운 식감, 정성 가득한 수제버거")
     extra_inputs = {"product_name": product_name, "product_feature": product_feature}
-
 else:
     start_date, end_date = st.date_input("이벤트 기간", value=(datetime.date.today(), datetime.date.today()))
     event_desc = st.text_area("이벤트 내용", placeholder="예: 10월 한정 30% 할인 행사")
@@ -119,16 +114,12 @@ else:
 # -----------------------------
 # 분위기/스타일 입력
 # -----------------------------
-vibe = st.text_input(
-    "광고 분위기 / 스타일",
-    placeholder="예: 따뜻한 햇살 아래 가족 피크닉 느낌, 파스텔톤 수채화 일러스트"
-)
+vibe = st.text_input("광고 분위기 / 스타일", placeholder="예: 따뜻한 햇살 아래 가족 피크닉 느낌, 파스텔톤 일러스트")
 
 # -----------------------------
 # 텍스트 스타일 옵션
 # -----------------------------
 st.markdown("### ✍️ 텍스트 스타일 설정")
-
 col1, col2 = st.columns(2)
 with col1:
     title_color = st.color_picker("제목 색상", "#FFFFFF")
@@ -138,7 +129,7 @@ with col2:
     body_font_size = st.slider("본문 폰트 크기", 30, 80, 50)
 
 # -----------------------------
-# 🎨 폰트 선택 및 미리보기
+# 폰트 선택 및 미리보기
 # -----------------------------
 font_dir = "data/fonts"
 fonts = [f for f in os.listdir(font_dir) if f.lower().endswith(".ttf")]
@@ -146,11 +137,9 @@ fonts = [f for f in os.listdir(font_dir) if f.lower().endswith(".ttf")]
 if fonts:
     selected_font = st.selectbox("폰트 선택", fonts, index=0)
     font_path = os.path.join(font_dir, selected_font)
-
     st.markdown("##### ✨ 폰트 미리보기")
-    preview_text = "포스터 광고 예시 텍스트"
-
     try:
+        preview_text = "포스터 광고 예시 텍스트"
         font = ImageFont.truetype(font_path, 50)
         img = Image.new("RGB", (800, 150), color=(30, 30, 30))
         draw = ImageDraw.Draw(img)
@@ -165,7 +154,7 @@ else:
 # -----------------------------
 # 기타 설정
 # -----------------------------
-position = st.selectbox("제목 위치 선택", ["상단", "중앙", "하단"], index=0)
+position = st.selectbox("제목 위치 선택", ["top", "center", "bottom"], index=0)
 dalle_size = st.selectbox("이미지 크기", ["1024x1024", "1024x1792", "1792x1024"], index=0)
 
 go = st.button("🎨 포스터 생성", type="primary")
@@ -204,6 +193,10 @@ if go:
             "title_font_size": title_font_size,
             "body_font_size": body_font_size,
             "font_name": selected_font or "",
+            "stroke_color_title": "#000000",
+            "stroke_color_body": "#000000",
+            "stroke_width_title": 2,
+            "stroke_width_body": 2
         }
 
         img_res = requests.post(f"{BACKEND_URL}/poster/image", json=image_payload, headers=headers)
@@ -221,14 +214,42 @@ if go:
         st.success("✅ 포스터 생성 완료!")
 
 # -----------------------------
-# 히스토리
+# 히스토리 불러오기
+# -----------------------------
+st.divider()
+st.subheader("📜 내가 만든 포스터 히스토리")
+
+if st.button("📂 히스토리 불러오기"):
+    try:
+        res = requests.get(f"{BACKEND_URL}/poster/history", headers=headers, timeout=10)
+        if res.status_code == 200:
+            data = res.json().get("history", [])
+            st.session_state.poster_history = []
+
+            for item in data:
+                path = item.get("image_path")
+                if path and os.path.exists(path):
+                    with open(path, "rb") as f:
+                        img_bytes = f.read()
+                    st.session_state.poster_history.append({
+                        "title": item["text"].split("\n")[0],
+                        "body": "\n".join(item["text"].split("\n")[1:]),
+                        "dalle_prompt": "",
+                        "image_bytes": img_bytes
+                    })
+            st.success(f"✅ {len(st.session_state.poster_history)}개의 포스터를 불러왔습니다!")
+        else:
+            st.error("❌ 히스토리 요청 실패")
+    except Exception as e:
+        st.error(f"요청 오류: {e}")
+
+# -----------------------------
+# 히스토리 표시 (선택버튼 제거)
 # -----------------------------
 if st.session_state.poster_history:
-    st.subheader("📜 내가 만든 포스터 히스토리")
     for i, ad in enumerate(reversed(st.session_state.poster_history), 1):
         st.write(f"### {i}. {ad['title']}")
         st.write(ad["body"])
-        st.code(ad["dalle_prompt"], language="json")
         st.image(BytesIO(ad["image_bytes"]), caption="포스터", use_container_width=True)
         st.download_button(
             f"📥 다운로드 {i}",
@@ -236,3 +257,5 @@ if st.session_state.poster_history:
             file_name=f"poster_{i}.png",
             mime="image/png"
         )
+else:
+    st.info("아직 생성된 포스터 히스토리가 없습니다.")

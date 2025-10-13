@@ -91,11 +91,11 @@ with st.container():
         ">
             <p>🏷️ 매장 이름은 <b>{profile.get("store_name", "미입력")}</b> 입니다.</p>
             <p>📂 업종은 <b>{profile.get("category", "미입력")}</b> 이고,</p>
-            <p>📞 고객 연락처는 <b>{profile.get("phone", "미입력")}</b> 입니다.</p>
+            <p>📞 매장 연락처는 <b>{profile.get("phone", "미입력")}</b> 입니다.</p>
             <p>📍 매장은 <b>{profile.get("address", "미입력")}</b> 에 위치해 있습니다.</p>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-st.caption("💡 저장된 정보는 포스터/카드뉴스/마스코트/홈페이지에서 자동으로 사용됩니다.")
+st.caption("💡 저장된 정보는 포스터/카드뉴스/홈페이지/마스코트에서 자동으로 사용됩니다.")
