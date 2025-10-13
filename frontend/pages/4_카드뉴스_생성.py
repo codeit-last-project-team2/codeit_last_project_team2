@@ -248,7 +248,7 @@ if proj["font_path"]:
         preview_img = Image.new("RGB", (600, 120), "white")
         d = ImageDraw.Draw(preview_img)
         d.text((20, 40), "폰트 미리보기 ABC 가나다", font=font, fill=proj["font_color"])
-        st.image(preview_img, caption="폰트 미리보기", width="stretch")
+        st.image(preview_img, caption="폰트 미리보기", width=400)
     except Exception as e:
         st.warning(f"폰트 로드 실패: {e}")
 
