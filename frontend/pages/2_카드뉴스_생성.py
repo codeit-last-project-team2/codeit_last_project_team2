@@ -12,38 +12,23 @@ import requests
 import numpy as np
 import glob
 
-# -----------------------------
-# 프로젝트 루트 잡기
-# -----------------------------
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if ROOT_DIR not in sys.path:
     sys.path.append(ROOT_DIR)
 
 from backend.services.cardnews_service import hex_to_rgb
 
-# -----------------------------
-# 백엔드 URL
-# -----------------------------
 BACKEND_URL = "http://127.0.0.1:8000"
 
-# -----------------------------
-# 로그인 확인
-# -----------------------------
 if not st.session_state.get("token"):
     st.warning("⚠️ 로그인이 필요합니다. 홈에서 로그인하세요.")
     st.stop()
 
 headers = {"Authorization": f"Bearer {st.session_state.token}"}
 
-# -----------------------------
-# 페이지 설정
-# -----------------------------
 st.set_page_config(page_title="Card News Studio", layout="wide")
 st.title("🗂️ 카드 뉴스 생성")
 
-# -----------------------------
-# 세션 상태 초기화
-# -----------------------------
 if "project" not in st.session_state:
     st.session_state.project = {
         "num_pages": 3,
@@ -67,19 +52,12 @@ if "project" not in st.session_state:
 
         "font_path": None,
         "font_size": 48,
-        "font_color": (20, 20, 20),  # ✅ 폰트 색상 기본값
+        "font_color": (20, 20, 20),
         "overlay_opacity": 100,
     }
 
 proj = st.session_state.project
 
-# -----------------------------
-# 유틸 함수
-# -----------------------------
-def pil_to_png_bytes(img: Image.Image) -> bytes:
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return buf.getvalue()
 
 def export_zip_from_images(images: List[Image.Image]) -> bytes:
     mem = io.BytesIO()
@@ -92,25 +70,18 @@ def export_zip_from_images(images: List[Image.Image]) -> bytes:
     return mem.read()
 
 def place_overlay(canvas: Image.Image, overlay: Image.Image, opacity: int = 100) -> Image.Image:
-    """오버레이를 배경 중앙에 80% 면적으로 배치 (투명도만 적용)"""
     can = canvas.convert("RGBA")
     W, H = can.size
     ov = overlay.convert("RGBA")
-
-    # 크기 조정 (배경 면적의 80% 정도)
     target_area = int(W * H * 0.8)
     ratio = ov.width / max(1, ov.height)
     new_w = int((target_area * ratio) ** 0.5)
     new_h = max(1, int(new_w / ratio))
     ov = ov.resize((new_w, new_h), Image.LANCZOS)
-
-    # 투명도 조절
     if opacity < 100:
         alpha = ov.split()[-1]
         alpha = alpha.point(lambda p: int(p * (opacity / 100.0)))
         ov.putalpha(alpha)
-
-    # 중앙 배치
     x = W // 2 - ov.width // 2
     y = H // 2 - ov.height // 2
     can.paste(ov, (x, y), ov)
@@ -133,9 +104,7 @@ def load_font(path: str, size: int) -> ImageFont.FreeTypeFont:
     except Exception:
         return ImageFont.load_default()
 
-# -----------------------------
-# 0) 기본 정보 입력
-# -----------------------------
+
 st.markdown("### 📋 0) 기본 정보 입력")
 col1, col2 = st.columns(2)
 with col1:
@@ -149,9 +118,7 @@ with col2:
     proj["lang"] = st.selectbox("언어", ["ko", "en"], index=0 if proj["lang"] == "ko" else 1)
     proj["num_pages"] = st.slider("페이지 수", 3, 7, value=proj["num_pages"])
 
-# -----------------------------
-# 1) 텍스트 생성
-# -----------------------------
+
 st.markdown("### 📝 1) 텍스트 생성 & 편집")
 if st.button("✍️ 페이지별 텍스트 생성", type="primary"):
     req_body = {
@@ -174,9 +141,7 @@ for i in range(proj["num_pages"]):
     default = proj["page_texts"][i] if i < len(proj["page_texts"]) else ""
     proj["page_texts"][i:i+1] = [st.text_area(f"페이지 {i+1}", value=default, height=120)]
 
-# -----------------------------
-# 2) 배경 생성
-# -----------------------------
+
 st.markdown("### 🖼️ 2) 배경 생성")
 bg_method = st.radio("배경 방식", ["단색", "그라디언트", "이미지 업로드"],
                      index=["단색", "그라디언트", "이미지 업로드"].index(proj["bg_method"]))
@@ -213,7 +178,6 @@ if st.button("🖼️ 배경 만들기/적용"):
     proj["base_images"] = new_bases
     st.success("배경 적용 완료 ✅")
 
-    # ✅ 배경 미리보기
     if proj["base_images"]:
         st.markdown("**배경 미리보기**")
         cols = st.columns(min(4, len(proj["base_images"])) or 1)
@@ -221,9 +185,7 @@ if st.button("🖼️ 배경 만들기/적용"):
             with cols[i % len(cols)]:
                 st.image(im.convert("RGB"), caption=f"페이지 {i+1}", width="stretch")
 
-# -----------------------------
-# 3) 오버레이
-# -----------------------------
+
 st.markdown("### 🎨 3) 오버레이")
 use_overlay = st.checkbox("오버레이 사용", value=len(proj.get("overlay_images", [])) > 0)
 
@@ -247,7 +209,6 @@ if use_overlay:
                 if r.status_code == 200:
                     b64_str = r.json()
                     if isinstance(b64_str, dict):
-                        # 혹시 dict로 올 경우 대비
                         b64_str = b64_str.get("b64") or b64_str.get("image") or ""
                     if b64_str:
                         img = Image.open(io.BytesIO(base64.b64decode(b64_str))).convert("RGBA")
@@ -257,7 +218,6 @@ if use_overlay:
 
     proj["overlay_opacity"] = st.slider("오버레이 투명도 (%)", 0, 100, proj["overlay_opacity"])
 
-    # ✅ 배경+오버레이 합성 미리보기
     if proj.get("overlay_images") and proj.get("base_images"):
         st.markdown("**배경 + 오버레이 적용 미리보기**")
         cols = st.columns(min(4, len(proj["base_images"])) or 1)
@@ -267,9 +227,7 @@ if use_overlay:
                 preview = place_overlay(bg, ov, opacity=proj["overlay_opacity"])
                 st.image(preview, caption=f"페이지 {i+1}", width="stretch")
 
-# -----------------------------
-# 4) 텍스트 폰트
-# -----------------------------
+
 st.markdown("### 🔤 4) 텍스트 폰트 설정")
 
 font_files = glob.glob("data/fonts/*.ttf") + glob.glob("data/fonts/*.otf")
@@ -284,7 +242,6 @@ proj["font_size"] = st.slider("폰트 크기", 20, 100, proj["font_size"])
 font_color_hex = st.color_picker("폰트 색상", "#141414")
 proj["font_color"] = hex_to_rgb(font_color_hex)
 
-# ✅ 폰트 미리보기
 if proj["font_path"]:
     try:
         font = load_font(proj["font_path"], proj["font_size"])
@@ -295,51 +252,31 @@ if proj["font_path"]:
     except Exception as e:
         st.warning(f"폰트 로드 실패: {e}")
 
-# -----------------------------
-# 5) 합성 (중앙 + 폰트 색상)
-# -----------------------------
+
 st.markdown("### ✒️ 5) 합성")
 if st.button("합성 실행"):
     finals = []
     for i, bg in enumerate(proj["base_images"]):
-        text = proj["page_texts"][i] if i < len(    proj["page_texts"]) else ""
-
+        text = proj["page_texts"][i] if i < len(proj["page_texts"]) else ""
         base_rgba = bg.convert("RGBA")
-
         if use_overlay and proj.get("overlay_images"):
             ov = proj["overlay_images"][i % len(proj["overlay_images"])]
             base_rgba = place_overlay(base_rgba, ov, opacity=proj["overlay_opacity"])
-
         flattened = Image.new("RGB", base_rgba.size, (255, 255, 255))
         flattened.paste(base_rgba, mask=base_rgba.split()[-1])
-
         draw = ImageDraw.Draw(flattened)
         font = load_font(proj["font_path"], proj["font_size"])
         wrapped = wrap_text_simple(text)
-
         bbox = draw.multiline_textbbox((0, 0), wrapped, font=font, spacing=8)
         tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
         W, H = flattened.size
         x = (W - tw) / 2
         y = (H - th) / 2
-
-        draw.multiline_text(
-            (x, y),
-            wrapped,
-            fill=proj["font_color"],
-            font=font,
-            align="center",
-            spacing=8,
-        )
-
+        draw.multiline_text((x, y), wrapped, fill=proj["font_color"], font=font, align="center", spacing=8)
         finals.append(flattened)
-
     proj["final_images"] = finals
     st.success("합성 완료 ✅")
 
-
-
-    # ✅ 자동 저장 (ZIP → base64 → /cardnews/save)
     try:
         zip_bytes = export_zip_from_images(proj["final_images"])
         payload = {
@@ -354,6 +291,7 @@ if st.button("합성 실행"):
     except Exception as e:
         st.warning(f"자동 저장 중 오류: {e}")
 
+
 if proj.get("final_images"):
     st.markdown("**최종 미리보기**")
     cols = st.columns(min(4, len(proj["final_images"])) or 1)
@@ -361,9 +299,16 @@ if proj.get("final_images"):
         with cols[i % len(cols)]:
             st.image(im, caption=f"페이지 {i+1}", width="stretch")
 
-# -----------------------------
-# 6) 저장 & 히스토리
-# -----------------------------
+    # ✅ 즉시 다운로드 버튼 추가
+    zip_bytes = export_zip_from_images(proj["final_images"])
+    st.download_button(
+        "📦 ZIP 다운로드 (최종 카드뉴스)",
+        data=zip_bytes,
+        file_name=f"cardnews_{datetime.now().strftime('%Y%m%d_%H%M')}.zip",
+        mime="application/zip",
+    )
+
+
 st.markdown("### 📜 히스토리 불러오기")
 if st.button("📂 히스토리 불러오기"):
     try:
@@ -379,8 +324,6 @@ if st.button("📂 히스토리 불러오기"):
                     with st.container(border=True):
                         st.write(f"**{idx}. {it['title']}**")
                         st.caption(f"🕒 {it['created_at']}")
-
-                        # zip_b64 → 다운로드 버튼
                         zb64 = it.get("zip_b64") or ""
                         if zb64:
                             zbytes = base64.b64decode(zb64)
