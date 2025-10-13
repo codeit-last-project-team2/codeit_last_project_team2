@@ -18,7 +18,8 @@ headers = {"Authorization": f"Bearer {st.session_state.token}"}
 # ------------------------
 # 백엔드 호출 함수
 # ------------------------
-def generate_ad_copy(product, num_copies, tone, length, model):
+def generate_ad_copy(product, num_copies, tone, length):
+    model = MODEL_BY_LENGTH.get(length, "gpt-5-mini")
     payload = {
         "product": product,
         "tone": tone,
@@ -27,17 +28,14 @@ def generate_ad_copy(product, num_copies, tone, length, model):
         "model": model,
     }
     r = requests.post(f"{BACKEND_URL}/adcopy/text", json=payload, headers=headers, timeout=60)
-
     if r.ok:
         return r.json()
     else:
-        # ✅ 502 등에 담긴 백엔드 detail 표시
         try:
             err = r.json()
             detail = err.get("detail") or r.text
         except Exception:
             detail = r.text
-        # 스트림릿 상단에서 보여줄 수 있게 예외 메시지에 포함
         raise RuntimeError(f"API {r.status_code} - {detail}")
     
 # --- 도움말 (접기/펼치기) ---
@@ -78,16 +76,25 @@ tone_options = ["친근한", "전문적인", "유머러스한", "감성적인", 
 selected_tones = st.multiselect("문구 스타일", tone_options)
 tone = ", ".join(selected_tones) if selected_tones else "기본"
 
-# 문구 길이 토글
-length_options = ["short", "long"]
-length_labels  = ["짧게 (1~2문장)", "길게 (3~4문장)"]
-length = st.selectbox("문구 길이", length_options, format_func=lambda x: length_labels[length_options.index(x)], index=1)
+# 길이 선택 (짧게/중간/길게)
+length_options = ["short", "medium", "long"]
+length_labels  = ["짧게 (1~2문장)", "중간 (2~3문장)", "길게 (4~5문장)"]
+length = st.selectbox(
+    "문구 길이",
+    length_options,
+    index=1,
+    format_func=lambda x: length_labels[length_options.index(x)]
+)
+
+# 길이에 따른 모델 자동 매핑
+MODEL_BY_LENGTH = {
+    "short":  "gpt-4.1-mini",
+    "medium": "gpt-5-mini",
+    "long":   "gpt-5",
+}
 
 # 생성 개수
 num_copies = st.number_input("생성할 문구 개수", min_value=1, max_value=10, value=3)
-
-# 모델 선택 토글
-model = st.selectbox("모델 선택", ["gpt-4.1-mini","gpt-4.1-nano","gpt-5","gpt-5-nano","gpt-5-mini"])
 
 # ------------------------
 # 3️⃣ 문구 생성 버튼
@@ -98,7 +105,7 @@ if st.button("문구 생성"):
     else:
         with st.spinner("문구 생성 중..."):
             try:
-                result = generate_ad_copy(product, num_copies, tone, length, model)
+                result = generate_ad_copy(product, num_copies, tone, length)
 
                 # 파싱된 문구 출력
                 st.subheader("생성 결과")
