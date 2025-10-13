@@ -85,12 +85,7 @@ if go:
     st.success("✅ 마스코트 후보가 생성되었습니다!")
     st.markdown("### 🐱 생성된 마스코트 후보들")
 
-    # URL이 만료되기 전에 즉시 가져와서 표시 + 다운로드 버튼 만들기
-    # 세션 스테이트 사용 안 함
-    cols = st.columns(min(4, len(image_urls)) or 1)
-
-    # 선택용 라디오(세션 없이도 한 번의 렌더링 사이클에서 선택 가능)
-    selected_idx = None
+    cols = st.columns(len(image_urls))
 
     for i, url in enumerate(image_urls):
         with cols[i % len(cols)]:
@@ -102,31 +97,23 @@ if go:
 
             st.image(img, caption=f"{i+1}번", use_container_width=True)
 
-            # 다운로드 버튼들
-            fname_base = (store.get("store_name") or "mascot").strip().replace(" ", "_")
-            st.download_button(
-                label="⬇️ PNG 다운로드",
-                data=png_bytes,
-                file_name=f"{fname_base}_{i+1}.png",
-                mime="image/png",
-                key=f"dl_png_{i}",
-            )
-            st.download_button(
-                label="⬇️ JPG 다운로드",
-                data=jpg_bytes,
-                file_name=f"{fname_base}_{i+1}.jpg",
-                mime="image/jpeg",
-                key=f"dl_jpg_{i}",
-            )
+            sub_col1, sub_col2 = st.columns(2)
+            with sub_col1:
+                fname_base = (store.get("store_name") or "mascot").strip().replace(" ", "_")
+                st.download_button(
+                    label="⬇️ PNG 다운로드",
+                    data=png_bytes,
+                    file_name=f"{fname_base}_{i+1}.png",
+                    mime="image/png",
+                    key=f"dl_png_{i}",
+                )
+            with sub_col2:
+                st.download_button(
+                    label="⬇️ JPG 다운로드",
+                    data=jpg_bytes,
+                    file_name=f"{fname_base}_{i+1}.jpg",
+                    mime="image/jpeg",
+                    key=f"dl_jpg_{i}",
+                )
 
-    # 선택 UI: 한 번에 고르는 방식 (세션 없이 동작)
-    if len(image_urls) > 0:
-        # 사용자가 같은 사이클에서 선택해야 하므로, 라디오를 이미지 아래에 둡니다.
-        selected_idx = st.radio(
-            "선택할 마스코트를 고르세요",
-            options=list(range(len(image_urls))),
-            format_func=lambda k: f"{k+1}번",
-            horizontal=True,
-        )
-        if selected_idx is not None:
-            st.info(f"현재 선택: {selected_idx+1}번")
+    
