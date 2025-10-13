@@ -2,7 +2,7 @@
 import requests
 from io import BytesIO
 from PIL import Image
-import io
+import io, os, uuid
 
 BACKEND_URL = "http://127.0.0.1:8000"
 
@@ -20,8 +20,30 @@ if "store_profile" not in st.session_state or not st.session_state["store_profil
     st.warning("⚠️ 매장 관리 페이지에서 정보를 먼저 입력해주세요.")
     st.stop()
 
+# -----------------------------
+# 세션 초기화
+# -----------------------------
+if "mascot_history" not in st.session_state:
+    st.session_state.mascot_history = []
+
+
 headers = {"Authorization": f"Bearer {st.session_state.token}"}
 store = st.session_state["store_profile"]
+# -----------------------------
+# 이미지 저장 함수
+# -----------------------------
+def save_mascot_img(img_bytes, email=st.session_state['user_email']):
+    save_dir = os.path.join('data', 'user_info', email, 'mascot_img')
+    os.makedirs(save_dir, exist_ok=True)
+
+    uniq = uuid.uuid4().hex[:6]
+    filename = f"{uniq}.png"
+    path = os.path.join(save_dir, filename)
+
+    with open(path, "wb") as f:
+        f.write(img_bytes)
+
+    return path
 
 # -----------------------------
 # 추가 입력 UI
@@ -94,7 +116,21 @@ if go:
             except Exception as e:
                 st.error(f"이미지 로드 실패({i+1}번): {e}")
                 continue
+            
+            img_path = save_mascot_img(img_bytes=png_bytes)
+            mascot_save_payload = {
+                'user_email': st.session_state.get("user_email"),
+                'store_name': store.get("store_name", ""),
+                'keyword': keyword,
+                'mascot_personality': personality,
+                'path': img_path,
+            }
 
+            res = requests.post(f"{BACKEND_URL}/mascot/save", json=mascot_save_payload, headers=headers)
+            if res.status_code != 200:
+                st.error("❌ 마스코트 저장 실패")
+                st.stop()
+            
             st.image(img, caption=f"{i+1}번", use_container_width=True)
 
             sub_col1, sub_col2 = st.columns(2)
@@ -115,5 +151,70 @@ if go:
                     mime="image/jpeg",
                     key=f"dl_jpg_{i}",
                 )
-
     
+if st.button("📂 히스토리 불러오기"):
+    try:
+        res = requests.get(f"{BACKEND_URL}/mascot/history", headers=headers)
+        if res.status_code != 200:
+            st.error("❌ 히스토리 요청 실패")
+            st.stop()
+        data = res.json().get("history", [])
+        
+        st.session_state.mascot_history = []
+
+        for item in data:
+            path = item.get("path")
+            if path and os.path.exists(path):
+                with open(path, "rb") as f:
+                    img_bytes = f.read()
+                st.session_state.mascot_history.append({
+                    "store_name": item["store_name"],
+                    "keyword": item["keyword"],
+                    "mascot_personality": item["mascot_personality"],
+                    "created_at": item["created_at"],
+                    "image_bytes": img_bytes
+                })
+
+        st.success(f"✅ {len(st.session_state.mascot_history)}개의 포스터를 불러왔습니다!")
+        
+    except Exception as e:
+        st.error(f"요청 오류: {e}")
+
+    # -----------------------------
+    # 히스토리 표시 (선택버튼 제거)
+    # -----------------------------
+    st.markdown("""
+    <style>
+    /* 포스터 썸네일 공통 스타일 */
+    .poster-grid img {
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    if st.session_state.mascot_history:
+        posters = list(reversed(st.session_state.mascot_history))
+        num_cols = 3
+
+        for row_start in range(0, len(posters), num_cols):
+            cols = st.columns(num_cols, gap="small")
+            # 현재 줄의 포스터들
+            row_items = posters[row_start:row_start + num_cols]
+            for idx, (col, ad) in enumerate(zip(cols, row_items)):
+                with col:
+                    # 본문/캡션
+                    # st.caption(ad["body"])
+                    # 이미지 (bytes 바로 사용)
+                    st.image(ad["image_bytes"], caption=None, use_container_width=True)
+                    # 다운로드 버튼 (고유 key 필수)
+                    st.download_button(
+                        "📥 다운로드",
+                        data=ad["image_bytes"],
+                        file_name=f"mascot_{row_start+idx+1}.png",
+                        mime="image/png",
+                        use_container_width=True,
+                        key=f"download_{row_start}_{idx}",
+                    )
+    else:
+        st.info("아직 생성된 마스코트 히스토리가 없습니다.")

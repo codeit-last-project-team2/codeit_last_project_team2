@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from backend.models.mascot_model import MascotRequest, MascotHistoryItem
 from backend.services.mascot_service import (
     generate_mascot_url_candidates,
@@ -23,4 +24,12 @@ def save_mascot(item: MascotHistoryItem, user=Depends(get_current_user)):
 # 마스코트 히스토리 조회
 @router.get("/history")
 def history(user=Depends(get_current_user)):
-    return get_mascot_history(user["email"])
+    email = user.get("email")
+    if not email:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="로그인 정보 누락")
+
+    history = get_mascot_history(email)
+    if not history:
+        return JSONResponse(content={"history": [], "message": "히스토리가 없습니다."})
+
+    return JSONResponse(content={"history": history})
