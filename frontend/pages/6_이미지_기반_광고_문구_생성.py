@@ -6,14 +6,36 @@ import requests
 
 BACKEND_URL = "http://127.0.0.1:8000"
 
-st.title("광고 문구 생성")
+st.title("✏ 이미지 기반 광고 문구 생성")
 
 # 토큰 체크
 if not st.session_state.get("token"):
-    st.warning("⚠️ 로그인이 필요합니다. 홈에서 로그인하세요.")
-    st.stop()
+ st.warning("⚠️ 로그인이 필요합니다. 홈에서 로그인하세요.")
+ st.stop()
 
 headers = {"Authorization": f"Bearer {st.session_state.token}"}
+
+# --- 도움말 (접기/펼치기) ---
+with st.expander("❓ 도움말", expanded=False):
+    st.markdown(
+        """
+        <div style="
+            background:#f7f7f8;
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+            padding:16px 18px;
+            line-height:1.7;
+            font-size:15px;
+        ">
+            <p><b>이미지 업로드</b> : 문구를 생성하는데 기반이 될 이미지를 첨부하세요.</p>
+            <p><b>문구 스타일</b> : 광고 문구의 전반적인 분위기를 선택하세요.</p>
+            <p><b>문구 길이</b> : <i>짧게</i>는 1~2문장, <i>길게</i>는 3~4문장 기준으로 생성됩니다.</p>
+            <p><b>생성 개수</b> : 한 번에 받아볼 문구의 개수입니다.</p>
+            <p><b>모델</b> : 긴 문장이나 풍부한 표현이 필요하면 gpt-5 계열을 권장합니다.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 # ------------------------
 # 2️⃣ 옵션 토글 / 선택

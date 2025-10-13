@@ -6,7 +6,7 @@ import streamlit as st
 
 BACKEND_URL = "http://127.0.0.1:8000"
 
-st.title("광고 문구 생성")
+st.title("📝 광고 문구 생성")
 
 # 환경 체크
 if not st.session_state.get("token"):
@@ -39,11 +39,34 @@ def generate_ad_copy(product, num_copies, tone, length, model):
             detail = r.text
         # 스트림릿 상단에서 보여줄 수 있게 예외 메시지에 포함
         raise RuntimeError(f"API {r.status_code} - {detail}")
+    
+# --- 도움말 (접기/펼치기) ---
+with st.expander("❓ 도움말", expanded=False):
+    st.markdown(
+        """
+        <div style="
+            background:#f7f7f8;
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+            padding:16px 18px;
+            line-height:1.7;
+            font-size:15px;
+        ">
+            <p><b>상품명</b> : 광고의 주체가 되는 제품/서비스 이름을 입력하세요.</p>
+            <p><b>문구 스타일</b> : 광고 문구의 전반적인 분위기를 선택하세요.</p>
+            <p><b>문구 길이</b> : <i>짧게</i>는 1~2문장, <i>길게</i>는 3~4문장 기준으로 생성됩니다.</p>
+            <p><b>생성 개수</b> : 한 번에 받아볼 문구의 개수입니다.</p>
+            <p><b>모델</b> : 긴 문장이나 풍부한 표현이 필요하면 gpt-5 계열을 권장합니다.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 # ------------------------
 # 1️⃣ 브랜드 / 상품명 입력
 # ------------------------
-product = st.text_input("상품명", placeholder = "여기에 입력해주세요")
+product = st.text_input("상품명", placeholder = "EX) 아메리카노")
 
 # ------------------------
 # 2️⃣ 옵션 토글 / 선택
@@ -64,7 +87,7 @@ length = st.selectbox("문구 길이", length_options, format_func=lambda x: len
 num_copies = st.number_input("생성할 문구 개수", min_value=1, max_value=10, value=3)
 
 # 모델 선택 토글
-model = st.selectbox("모델 선택 (gpt-5 : 긴 문장에 추천)", ["gpt-4.1-mini","gpt-4.1-nano","gpt-5","gpt-5-nano","gpt-5-mini"])
+model = st.selectbox("모델 선택", ["gpt-4.1-mini","gpt-4.1-nano","gpt-5","gpt-5-nano","gpt-5-mini"])
 
 # ------------------------
 # 3️⃣ 문구 생성 버튼
