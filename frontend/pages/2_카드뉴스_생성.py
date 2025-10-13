@@ -39,7 +39,7 @@ headers = {"Authorization": f"Bearer {st.session_state.token}"}
 # 페이지 설정
 # -----------------------------
 st.set_page_config(page_title="Card News Studio", layout="wide")
-st.title("🗂️ 카드 뉴스 스튜디오")
+st.title("🗂️ 카드 뉴스 생성")
 
 # -----------------------------
 # 세션 상태 초기화
