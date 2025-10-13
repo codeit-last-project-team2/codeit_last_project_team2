@@ -243,19 +243,19 @@ if st.button("📂 히스토리 불러오기"):
     except Exception as e:
         st.error(f"요청 오류: {e}")
 
-# -----------------------------
-# 히스토리 표시 (선택버튼 제거)
-# -----------------------------
-if st.session_state.poster_history:
-    for i, ad in enumerate(reversed(st.session_state.poster_history), 1):
-        st.write(f"### {i}. {ad['title']}")
-        st.write(ad["body"])
-        st.image(BytesIO(ad["image_bytes"]), caption="포스터", use_container_width=True)
-        st.download_button(
-            f"📥 다운로드 {i}",
-            data=ad["image_bytes"],
-            file_name=f"poster_{i}.png",
-            mime="image/png"
-        )
-else:
-    st.info("아직 생성된 포스터 히스토리가 없습니다.")
+    # -----------------------------
+    # 히스토리 표시 (선택버튼 제거)
+    # -----------------------------
+    if st.session_state.poster_history:
+        for i, ad in enumerate(reversed(st.session_state.poster_history), 1):
+            st.write(f"### {i}. {ad['title']}")
+            st.write(ad["body"])
+            st.image(BytesIO(ad["image_bytes"]), caption="포스터", use_container_width=True)
+            st.download_button(
+                f"📥 다운로드 {i}",
+                data=ad["image_bytes"],
+                file_name=f"poster_{i}.png",
+                mime="image/png"
+            )
+    else:
+        st.info("아직 생성된 포스터 히스토리가 없습니다.")
