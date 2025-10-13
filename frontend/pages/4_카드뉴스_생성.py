@@ -299,7 +299,6 @@ if proj.get("final_images"):
         with cols[i % len(cols)]:
             st.image(im, caption=f"페이지 {i+1}", width="stretch")
 
-    # ✅ 즉시 다운로드 버튼 추가
     zip_bytes = export_zip_from_images(proj["final_images"])
     st.download_button(
         "📦 ZIP 다운로드 (최종 카드뉴스)",
