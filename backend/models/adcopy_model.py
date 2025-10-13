@@ -5,7 +5,7 @@ from typing import List, Optional
 class AdcopyTextRequest(BaseModel):
     product: str
     tone: str
-    length: str = "short"      # "short" | "long"
+    length: str = "short"      # "short" | "medium" |"long"
     num_copies: int = 3
     model: str = "gpt-4.1-mini"
 
