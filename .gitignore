@@ -1,17 +1,55 @@
-# .gitignore는 추적
-!.gitignore
+# --- secrets (절대 푸시 금지) ---
+.env
+frontend/.streamlit/secrets.toml
 
-# .ipynb_checkpoints 디렉토리 무시
+# --- personal dotfiles (never commit) ---
+.bashrc
+.bash_logout
+.profile
+.lesshst
+.ssh/
+.wget-hsts
+.bash_history
+.python_history
+.dotnet/
+.vscode-server/
+
+# --- python 캐시/가상환경 ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# --- 편집기/OS 잡파일 ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
 .ipynb_checkpoints/
 
-# Python 바이트코드 파일 무시
-__pycache__/
+# --- streamlit 캐시 ---
+.streamlit/cache/
+frontend/.streamlit/cache/
 
-# notebook 디렉토리 무시
-notebook/
+/.cache/
+/.jupyter/
+/.local/
+/.npm/
+/.vscode-server/
+/.streamlit/
+/ssh
+.bash_history
+.python_history
+.wget-hsts
 
-# env 파일 무시
-.env
+# --- generated data / DB (산출물) ---
+# 모든 DB 파일
+*.db
+*.sqlite
+*.sqlite3
 
 # data 파일 무시
 data/*
@@ -21,3 +59,4 @@ data/*
 !data/fonts/**
 !data/sample/
 !data/sample/**
+.gitconfig
