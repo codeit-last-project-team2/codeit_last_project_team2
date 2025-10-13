@@ -59,3 +59,4 @@ data/*
 !data/fonts/**
 !data/sample/
 !data/sample/**
+.gitconfig
