@@ -2,6 +2,7 @@
 import requests
 from io import BytesIO
 from PIL import Image
+import io
 
 BACKEND_URL = "http://127.0.0.1:8000"
 
@@ -38,6 +39,25 @@ go = st.button("🎨 마스코트 생성", type="primary")
 # -----------------------------
 # 실행
 # -----------------------------
+def fetch_image_and_bytes(url: str):
+    """URL에서 이미지를 받아 PIL.Image로 로드하고 PNG/JPG 바이트를 모두 반환."""
+    resp = requests.get(url, timeout=20)
+    resp.raise_for_status()
+    img = Image.open(io.BytesIO(resp.content)).convert("RGBA")  # 투명 채널 대비
+
+    # PNG 바이트
+    png_buf = io.BytesIO()
+    img.save(png_buf, format="PNG")
+    png_bytes = png_buf.getvalue()
+
+    # JPG 바이트 (JPG는 알파 채널 없음)
+    jpg_buf = io.BytesIO()
+    img_rgb = img.convert("RGB")
+    img_rgb.save(jpg_buf, format="JPEG", quality=95)
+    jpg_bytes = jpg_buf.getvalue()
+
+    return img, png_bytes, jpg_bytes
+
 if go:
     with st.spinner("마스코트 생성 중..."):
         payload = {
@@ -56,6 +76,57 @@ if go:
             st.error("❌ 마스코트 생성 실패")
             st.stop()
 
-        image_bytes = BytesIO(res.content)
-        st.image(Image.open(image_bytes), caption="생성된 마스코트", use_container_width=True)
-        st.download_button("📥 이미지 다운로드", image_bytes, file_name="mascot.png", mime="image/png")
+        # 서버 응답: 이미지 URL 리스트
+        image_urls = res.json()
+        if not image_urls:
+            st.warning("생성된 이미지가 없습니다.")
+            st.stop()
+
+    st.success("✅ 마스코트 후보가 생성되었습니다!")
+    st.markdown("### 🐱 생성된 마스코트 후보들")
+
+    # URL이 만료되기 전에 즉시 가져와서 표시 + 다운로드 버튼 만들기
+    # 세션 스테이트 사용 안 함
+    cols = st.columns(min(4, len(image_urls)) or 1)
+
+    # 선택용 라디오(세션 없이도 한 번의 렌더링 사이클에서 선택 가능)
+    selected_idx = None
+
+    for i, url in enumerate(image_urls):
+        with cols[i % len(cols)]:
+            try:
+                img, png_bytes, jpg_bytes = fetch_image_and_bytes(url)
+            except Exception as e:
+                st.error(f"이미지 로드 실패({i+1}번): {e}")
+                continue
+
+            st.image(img, caption=f"{i+1}번", use_container_width=True)
+
+            # 다운로드 버튼들
+            fname_base = (store.get("store_name") or "mascot").strip().replace(" ", "_")
+            st.download_button(
+                label="⬇️ PNG 다운로드",
+                data=png_bytes,
+                file_name=f"{fname_base}_{i+1}.png",
+                mime="image/png",
+                key=f"dl_png_{i}",
+            )
+            st.download_button(
+                label="⬇️ JPG 다운로드",
+                data=jpg_bytes,
+                file_name=f"{fname_base}_{i+1}.jpg",
+                mime="image/jpeg",
+                key=f"dl_jpg_{i}",
+            )
+
+    # 선택 UI: 한 번에 고르는 방식 (세션 없이 동작)
+    if len(image_urls) > 0:
+        # 사용자가 같은 사이클에서 선택해야 하므로, 라디오를 이미지 아래에 둡니다.
+        selected_idx = st.radio(
+            "선택할 마스코트를 고르세요",
+            options=list(range(len(image_urls))),
+            format_func=lambda k: f"{k+1}번",
+            horizontal=True,
+        )
+        if selected_idx is not None:
+            st.info(f"현재 선택: {selected_idx+1}번")
