@@ -14,6 +14,7 @@ Link: https://www.notion.so/Daily-268ac8e1b95280faa9e8ea6fb48f4a3e?source=copy_l
 
 ### 조민정
 Link: https://www.notion.so/268f7116577b805f9be5dd30746522d1
+
 ---
 ## 제출
 PDF: 
