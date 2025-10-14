@@ -17,7 +17,7 @@ Link: https://www.notion.so/268f7116577b805f9be5dd30746522d1
 
 ---
 ## 보고서
-PDF: https://github.com/codeit-last-project-team2/codeit_last_project_team2/raw/main/reports/Final_Project_2팀.pdf
+PDF: https://github.com/codeit-last-project-team2/codeit_last_project_team2/raw/main/report/고급프로젝트_2팀.pdf
 
 ---
 ## 홈페이지 생성 repository
